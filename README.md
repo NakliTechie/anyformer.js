@@ -14,6 +14,7 @@ budget, OPFS quota, memory64), resolves the model to a back end, and exposes one
 
 - **transformers.js** — ONNX, breadth across modalities.
 - **diskformer** — models larger than GPU memory: weights in OPFS, only what each step needs on the GPU.
+- **kohra** — text-diffusion LMs (MDLM, BD3LM): a JS denoising loop over onnxruntime-web on WebGPU.
 - **llama.cpp on WebGPU + diskformer** — GGUF across llama.cpp's architectures (after the diskformer spike).
 - **LocalMind's hand engines** — the fastest path on the few models they cover.
 

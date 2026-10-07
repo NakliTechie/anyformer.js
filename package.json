@@ -6,8 +6,29 @@
   "license": "MIT",
   "author": "Chirag Patnaik",
   "homepage": "https://github.com/NakliTechie/anyformer.js#readme",
-  "repository": { "type": "git", "url": "git+https://github.com/NakliTechie/anyformer.js.git" },
-  "bugs": { "url": "https://github.com/NakliTechie/anyformer.js/issues" },
-  "keywords": ["webgpu", "llm", "inference", "browser", "transformers", "gguf", "onnx", "diskformer"],
-  "files": ["README.md", "LICENSE"]
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NakliTechie/anyformer.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NakliTechie/anyformer.js/issues"
+  },
+  "keywords": [
+    "webgpu",
+    "llm",
+    "inference",
+    "browser",
+    "transformers",
+    "gguf",
+    "onnx",
+    "diffusion",
+    "diskformer"
+  ],
+  "files": [
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test 'test/*.test.js'"
+  }
 }

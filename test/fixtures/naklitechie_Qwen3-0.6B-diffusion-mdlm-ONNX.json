@@ -1,0 +1,122 @@
+{
+ "id": "naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX",
+ "sha": "e43f61243237167905eb6e3fb93c937f12581324",
+ "pipeline_tag": "text-generation",
+ "tags": [
+  "onnxruntime-web",
+  "onnx",
+  "text-diffusion",
+  "masked-diffusion",
+  "diffusion-lm",
+  "webgpu",
+  "browser",
+  "kohra",
+  "text-generation",
+  "conversational",
+  "base_model:dllm-hub/Qwen3-0.6B-diffusion-mdlm-v0.1",
+  "base_model:quantized:dllm-hub/Qwen3-0.6B-diffusion-mdlm-v0.1",
+  "license:apache-2.0",
+  "region:us"
+ ],
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "blobId": "659d4407d58d41f118bcbf8538c412f9de0c86da",
+   "size": 1709
+  },
+  {
+   "rfilename": "README.md",
+   "blobId": "5eedb8926ba445060d32d07879109a71a075706e",
+   "size": 2886
+  },
+  {
+   "rfilename": "chat_template.jinja",
+   "blobId": "699ff8df401fe4788525e9c1f9b86a99eadd6230",
+   "size": 4116
+  },
+  {
+   "rfilename": "kohra.js",
+   "blobId": "1bb86904404d7e86d43c9240f18e5b0ae36cb30d",
+   "size": 9418
+  },
+  {
+   "rfilename": "merges.txt",
+   "blobId": "31349551d90c7606f325fe0f11bbb8bd5fa0d7c7",
+   "size": 1671853
+  },
+  {
+   "rfilename": "onnx/model_fp16_fused.onnx",
+   "blobId": "08033d930d020175a615960cec564a3ac240098c",
+   "size": 1210740,
+   "lfs": {
+    "sha256": "fd3cd0b92a6a71fae67e42438e1877b4f239c57e86a4910b8164e1f292b0837c",
+    "size": 1210740,
+    "pointerSize": 132
+   }
+  },
+  {
+   "rfilename": "onnx/model_fp16_fused.onnx.data",
+   "blobId": "50235a8a499e28f61a2aafdaf960d0669194d4f9",
+   "size": 1536804864,
+   "lfs": {
+    "sha256": "7bac27b8c9d74792d50aa64da945b5d9df16470bb139512b511aa1f3aedc97cf",
+    "size": 1536804864,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4f16_rtn_sym.onnx",
+   "blobId": "0e23365c1306a0243fae54ff1e5755933b9ff8a7",
+   "size": 1257258,
+   "lfs": {
+    "sha256": "8f926d95ad63bfbd6789e00e2b93e70b504f5f534b79ca6aaf5dce6f28bdcc8c",
+    "size": 1257258,
+    "pointerSize": 132
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4f16_rtn_sym.onnx.data",
+   "blobId": "60e93f3a98d03c855bb1d7d182989831aa1adb83",
+   "size": 680077312,
+   "lfs": {
+    "sha256": "91859e63428faebb2735711853383739bf463a807ab903184ce63a0232402cb5",
+    "size": 680077312,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "special_tokens_map.json",
+   "blobId": "795db154e4ae50116b811cbb456007019ff6cea6",
+   "size": 787
+  },
+  {
+   "rfilename": "tokenizer.json",
+   "blobId": "e1466f14a75a0c4134e79f54f0b9c0cd8ae7a207",
+   "size": 11422839,
+   "lfs": {
+    "sha256": "6d55810de1daf81d1d1259355b4b85810385022ab745be68029295935a4eacf0",
+    "size": 11422839,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "tokenizer_config.json",
+   "blobId": "4cb406001313e9b9f1cf53935c32bdca59e16bc2",
+   "size": 5645
+  },
+  {
+   "rfilename": "vocab.json",
+   "blobId": "4783fe10ac3adce15ac8f358ef5462739852c569",
+   "size": 2776833
+  }
+ ],
+ "config": {
+  "tokenizer_config": {
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "mask_token": "<|mask|>",
+   "pad_token": "<|endoftext|>",
+   "unk_token": null
+  }
+ }
+}

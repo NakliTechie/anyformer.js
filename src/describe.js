@@ -25,6 +25,8 @@ export function fromHubInfo(info, { endpoint = HF } = {}) {
     // GGUF repos report the architecture in the gguf block; transformers repos in config.model_type.
     architecture: info.gguf?.architecture || info.config?.model_type || null,
     task: info.pipeline_tag || null,
+    // Hub tags carry what format and architecture miss, e.g. 'text-diffusion' marks a kohra model.
+    tags: info.tags || [],
     files: { gguf, onnx, safetensors },
     ggufTotalBytes: info.gguf?.total ?? null,
   };
