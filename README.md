@@ -5,7 +5,7 @@ GPU budget.
 
 ## Install
 
-TODO: not published yet. The npm name `anyformer` is planned.
+Not usable yet. `anyformer@0.0.1` on npm is a name placeholder with no code.
 
 ## What it is
 

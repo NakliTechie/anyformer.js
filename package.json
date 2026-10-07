@@ -1,0 +1,13 @@
+{
+  "name": "anyformer",
+  "version": "0.0.1",
+  "description": "One call to run any model in a browser tab: picks the back end that fits the model's format, architecture and your GPU budget. Pre-release name placeholder; no code yet.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Chirag Patnaik",
+  "homepage": "https://github.com/NakliTechie/anyformer.js#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/NakliTechie/anyformer.js.git" },
+  "bugs": { "url": "https://github.com/NakliTechie/anyformer.js/issues" },
+  "keywords": ["webgpu", "llm", "inference", "browser", "transformers", "gguf", "onnx", "diskformer"],
+  "files": ["README.md", "LICENSE"]
+}
