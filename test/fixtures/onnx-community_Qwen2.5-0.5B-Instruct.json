@@ -1,0 +1,86 @@
+{
+ "id": "onnx-community/Qwen2.5-0.5B-Instruct",
+ "sha": "cc5cc01a65cc3ff17bdb73a7de33d879f62599b0",
+ "pipeline_tag": "text-generation",
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "size": 1519
+  },
+  {
+   "rfilename": "README.md",
+   "size": 545
+  },
+  {
+   "rfilename": "added_tokens.json",
+   "size": 605
+  },
+  {
+   "rfilename": "config.json",
+   "size": 678
+  },
+  {
+   "rfilename": "generation_config.json",
+   "size": 242
+  },
+  {
+   "rfilename": "merges.txt",
+   "size": 1671853
+  },
+  {
+   "rfilename": "onnx/model.onnx",
+   "size": 1993796793
+  },
+  {
+   "rfilename": "onnx/model_bnb4.onnx",
+   "size": 763794004
+  },
+  {
+   "rfilename": "onnx/model_fp16.onnx",
+   "size": 997354499
+  },
+  {
+   "rfilename": "onnx/model_int8.onnx",
+   "size": 512096557
+  },
+  {
+   "rfilename": "onnx/model_q4.onnx",
+   "size": 786156820
+  },
+  {
+   "rfilename": "onnx/model_q4f16.onnx",
+   "size": 483003582
+  },
+  {
+   "rfilename": "onnx/model_quantized.onnx",
+   "size": 512096557
+  },
+  {
+   "rfilename": "onnx/model_uint8.onnx",
+   "size": 512096636
+  },
+  {
+   "rfilename": "quantize_config.json",
+   "size": 285
+  },
+  {
+   "rfilename": "special_tokens_map.json",
+   "size": 613
+  },
+  {
+   "rfilename": "tokenizer.json",
+   "size": 7031673
+  },
+  {
+   "rfilename": "tokenizer_config.json",
+   "size": 7306
+  },
+  {
+   "rfilename": "vocab.json",
+   "size": 2776833
+  }
+ ],
+ "config": {
+  "model_type": "qwen2"
+ }
+}

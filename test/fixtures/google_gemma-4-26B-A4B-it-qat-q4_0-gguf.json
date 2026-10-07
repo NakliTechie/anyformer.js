@@ -1,0 +1,27 @@
+{
+ "id": "google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+ "sha": "d1c082be9cf3c8a514acf63b8761f4b41935842e",
+ "pipeline_tag": "image-text-to-text",
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "size": 1767
+  },
+  {
+   "rfilename": "README.md",
+   "size": 29288
+  },
+  {
+   "rfilename": "gemma-4-26B-it-mmproj.gguf",
+   "size": 1194828160
+  },
+  {
+   "rfilename": "gemma-4-26B_q4_0-it.gguf",
+   "size": 14439363584
+  }
+ ],
+ "gguf": {
+  "total": 25233142046,
+  "architecture": "gemma4"
+ }
+}
