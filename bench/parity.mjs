@@ -30,7 +30,9 @@ export const ROWS = [
   { key: 'gemma4-e4b', repo: 'onnx-community/gemma-4-E4B-it-ONNX', budget: 8, dtype: 'q4f16', rp: 1.1, ...LMP },
   { key: 'lfm2-1.2b', repo: 'LiquidAI/LFM2.5-1.2B-Instruct-ONNX', budget: 2.5, dtype: 'q4f16', rp: 1.05, ...LMP },
   { key: 'bonsai-ternary-4b', repo: 'onnx-community/Ternary-Bonsai-4B-ONNX', budget: 2.5, dtype: 'q2f16', rp: 1.05, ...LMP },
-  { key: 'gemma4-26b-a4b-ssd', repo: 'google/gemma-4-26B-A4B-it-qat-q4_0-gguf', budget: 2.5, ...CHATP },
+  // LocalMind loads this engine without a budget (a 4 GiB expert pool) at contextSize 4096; 7.4 GB at 4096 tokens gives
+  // anyformer the same pool (about 3.04 GB fixed + 4.29 GB of experts).
+  { key: 'gemma4-26b-a4b-ssd', repo: 'google/gemma-4-26B-A4B-it-qat-q4_0-gguf', budget: 7.4, ctx: 4096, ...CHATP },
 ];
 const pick = arg('rows') ? arg('rows').split(',') : null;
 const rows = ROWS.filter((r) => !pick || pick.includes(r.key));
@@ -94,7 +96,7 @@ export async function localmindReply(b, port, key, prompt, n, runs = 1) {
 
 // anyformer, through test/browser/answer.html on the same origin.
 export async function anyformerReply(b, port, row, prompt, n, runs = 1, minutes = 60) {
-  const q = new URLSearchParams({ repo: row.repo, budget: row.budget, n, prompt, runs, ...(row.dtype && { dtype: row.dtype }), ...(row.rp && { rp: row.rp }), ...(arg('tjs') && { tjs: arg('tjs') }) });
+  const q = new URLSearchParams({ repo: row.repo, budget: row.budget, n, prompt, runs, ...(row.dtype && { dtype: row.dtype }), ...(row.rp && { rp: row.rp }), ...(row.ctx && { ctx: row.ctx }), ...(arg('tjs') && { tjs: arg('tjs') }) });
   await b.send('Page.navigate', { url: `http://127.0.0.1:${port}/test/browser/answer.html?${q}` });
   for (const t0 = Date.now(); Date.now() - t0 < minutes * 60e3; await sleep(1000)) {
     const v = await b.ev('window.result || null').catch(() => null);
