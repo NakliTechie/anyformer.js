@@ -29,3 +29,20 @@ test('an architecture-specific engine wins over wllama for the same GGUF', async
   const gemma = await plan('x', { model: fx('google/gemma-4-26B-A4B-it-qat-q4_0-gguf'), caps: full, backends, budget: 2.5e9 });
   assert.equal(gemma.chosen, 'diskformer');
 });
+
+test('wllama over 2 GB: a single file is split locally (needs OPFS), a repo split set loads as is, past 3.6 GB refused', () => {
+  const q3 = fx('unsloth/Qwen3-4B-Instruct-2507-GGUF');
+  const r = wllamaBackend.canRun(q3, full, { budget: 8e9 });
+  assert.equal(r.ok, true);
+  assert.ok(r.estimate.diskBytes > 2 ** 31);
+  assert.equal(wllamaBackend.canRun(q3, { ...full, opfs: false }, { budget: 8e9 }).code, 'opfs');
+  const set = fromHubInfo({ id: 'x/split', gguf: { architecture: 'llama' }, siblings: [
+    { rfilename: 'm-Q4_K_M-00002-of-00002.gguf', size: 1.2e9 }, { rfilename: 'm-Q4_K_M-00001-of-00002.gguf', size: 1.5e9 }] });
+  const s = wllamaBackend.canRun(set, { webgpu: true }, { budget: 8e9 });
+  assert.equal(s.ok, true);
+  assert.equal(s.estimate.diskBytes, 2.7e9);
+  const partial = fromHubInfo({ id: 'x/partial', siblings: [{ rfilename: 'm-Q4_K_M-00001-of-00002.gguf', size: 1e9 }] });
+  assert.equal(wllamaBackend.canRun(partial, full, { budget: 8e9 }).code, 'model');
+  const huge = fromHubInfo({ id: 'x/huge', siblings: [{ rfilename: 'm-Q4_K_M.gguf', size: 4.2e9 }] });
+  assert.match(wllamaBackend.canRun(huge, full, { budget: 8e9 }).reason, /32-bit WebAssembly memory/);
+});

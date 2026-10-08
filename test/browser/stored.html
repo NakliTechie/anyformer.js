@@ -1,8 +1,15 @@
 <!doctype html><meta charset="utf-8"><title>stored</title>
-<!-- Lists the store and changes nothing. Run against the diskformer-chat profile to see the Gemma store:
-     node test/browser/run.mjs stored --port 8192 --profile ~/.cache/anyformer-chat-profile -->
+<!-- Lists the store; ?remove=<repo> also removes that repo and lists again. Run against a kept profile to see its
+     models, e.g. node test/browser/run.mjs stored --port 8193 --profile ~/.cache/anyformer-localmind-profile -->
 <script type="module">
-import { stored } from '../../index.js';
+import { stored, remove } from '../../index.js';
 import { run } from './harness.js';
-run('stored', async () => { const rows = await stored(); return { ok: true, rows }; });
+const q = new URLSearchParams(location.search);
+run('stored', async () => {
+  const rows = await stored();
+  if (!q.get('remove')) return { ok: true, rows };
+  const freed = await remove(q.get('remove'));
+  const after = await stored();
+  return { ok: !after.some((r) => r.repo === q.get('remove')), rows, freed, after };
+});
 </script>

@@ -57,7 +57,8 @@ tower ✓ · evaluator boundary ✓.
   their conditional-generation classes at q4f16, as LocalMind does.
 - localmind @main: LocalMind's hand-written engines, matched by architecture and format (lfm2 GGUF, Gemma 4
   QAT-mobile, qwen35 Prism ternary); resident on the GPU, so budget ≥ file size.
-- wllama 3.4.1 (LocalMind's pin): any single-file GGUF ≤ 2 GB no architecture engine covers; WebGPU when the budget
+- wllama 3.4.1 (LocalMind's pin): any GGUF ≤ ~3.6 GB no architecture engine covers (a repo's split set as is; a
+  single file over 2 GB split once into OPFS shards, src/gguf-split.js); WebGPU when the budget
   holds it, CPU otherwise. Thinking off (chat_template_kwargs). Ranks last.
 - Pins: src/sources.js holds exact versions and commits; `npm run pin` moves the git pins to each repo's main.
 - Agent face: 9 tools (models, probe, plan, load, generate, sessions, unload, stored, remove). Person-only acts: none.
