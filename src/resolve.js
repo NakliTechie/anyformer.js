@@ -2,19 +2,23 @@
 //
 // Back-end contract (each back end is a plain object):
 //   id        string, stable, e.g. 'diskformer'
-//   canRun(model, caps, { budget }) → { ok: true, estimate } | { ok: false, code, reason, need? }
+//   tasks     the Hugging Face pipeline tasks it runs, e.g. ['text-generation']
+//   canRun(model, caps, { budget, task }) → { ok: true, estimate } | { ok: false, code, reason, need? }
 //             estimate = { gpuBytes, diskBytes, tokPerSec | null }. No network, no GPU allocation: it reads the
 //             descriptor and caps only. code is one of REFUSALS below; need is the budget that would pass, with
 //             code 'budget'. A throw counts as code 'threw' with the message as the reason.
 //   load(model, { budget, caps, maxCtx, onProgress, signal }) → session   (maxCtx: tokens; undefined = the back
 //             end's default)
-//             session = { generate(messages, opts) → async iterable of { text, tokens }, dispose() }
+//             session = { run(input, opts) → result, dispose() }; a text-generation session also has
+//             generate(messages, opts) → async iterable of { text, tokens }, and run(messages) is its last chunk.
+//   task is the requested pipeline task, or null for the repo's own (model.task).
 //             The back end applies the model's own chat template.
 
 // Why a back end said no: a closed set, each with the move that changes the answer.
 export const REFUSALS = {
   format: 'the repo has no weights in a format this back end reads; pick a repo in another format',
-  model: 'this back end reads the format but not this model (architecture, task or file); pick another model',
+  model: 'this back end reads the format but not this model (architecture or file); pick another model',
+  task: 'this back end does not run the requested task; another back end or another repo does',
   webgpu: 'no WebGPU adapter; use Chrome or Edge 121+ on a GPU with WebGPU',
   f16: 'the GPU lacks shader-f16; use a GPU that has it',
   opfs: 'no OPFS; use a browser with navigator.storage.getDirectory, outside private mode',
@@ -22,11 +26,11 @@ export const REFUSALS = {
   threw: 'the back end crashed deciding; a bug in that back end, report it with the reason',
 };
 
-export async function resolve(model, caps, backends, { budget } = {}) {
+export async function resolve(model, caps, backends, { budget, task = null } = {}) {
   const candidates = [];
   for (const [order, b] of backends.entries()) {
     let r;
-    try { r = await b.canRun(model, caps, { budget }); } catch (e) { r = { ok: false, code: 'threw', reason: `canRun threw: ${e.message}` }; }
+    try { r = await b.canRun(model, caps, { budget, task }); } catch (e) { r = { ok: false, code: 'threw', reason: `canRun threw: ${e.message}` }; }
     candidates.push(r.ok ? { backend: b.id, order, ok: true, estimate: r.estimate } : { backend: b.id, order, ok: false, code: r.code || 'model', reason: r.reason, ...(r.need && { need: r.need }) });
   }
   const ranked = candidates.filter((c) => c.ok).sort(rank);

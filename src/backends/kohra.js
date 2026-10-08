@@ -20,10 +20,12 @@ const chatml = (messages) =>
 
 export const kohraBackend = {
   id: 'kohra',
+  tasks: ['text-generation'],
   source: 'https://cdn.jsdelivr.net/gh/NakliTechie/kohra@main/kohra.js',
 
-  canRun(model, caps) {
+  canRun(model, caps, { task } = {}) {
     if (!model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'not a text-diffusion model' };
+    if (task && task !== 'text-generation') return { ok: false, code: 'task', reason: `task ${task}; kohra runs text-generation only` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     const graph = pickGraph(model, caps);
     if (!graph) return { ok: false, code: 'format', reason: `no kohra graph (${FP16} or ${Q4}) in the repo` };
@@ -42,6 +44,7 @@ export const kohraBackend = {
     signal?.throwIfAborted();
     const blockCausal = model.tags.includes('block-diffusion');
     return {
+      task: 'text-generation',
       // Diffusion fills the whole block at once, so the reply arrives as one chunk.
       async *generate(messages, { maxNewTokens = 128, steps, signal } = {}) {
         signal?.throwIfAborted();

@@ -129,3 +129,23 @@ test('isAnyformerError checks name and code, so a second copy of the library sti
   assert.ok(!isAnyformerError(Object.assign(new Error('x'), { name: 'AnyformerError', code: 'NOPE' })));
   assert.ok(Object.keys(ERROR_CODES).length === 7);
 });
+
+test('a non-generation session: run() is queued, carries the task, and wraps failures', async () => {
+  const log = [];
+  const embedder = { id: 'e', canRun: () => ({ ok: true, estimate: {} }), load: async (m, o) => ({
+    task: 'feature-extraction',
+    async run(x) { log.push(`start ${x}`); await new Promise((r) => setTimeout(r, 10)); log.push(`end ${x}`); if (x === 'bad') throw new Error('lost'); return [x.length]; },
+  }) };
+  const s = await load('a/b', { caps, model, backends: [embedder] });
+  assert.equal(s.task, 'feature-extraction');
+  assert.equal(s.generate, undefined);
+  const [a, b] = await Promise.all([s.run('one'), s.run('three')]);
+  assert.deepEqual([a, b], [[3], [5]]);
+  assert.deepEqual(log, ['start one', 'end one', 'start three', 'end three']);
+  await assert.rejects(s.run('bad'), (e) => isAnyformerError(e, 'EXECUTION_FAILED'));
+});
+
+test('a text-generation session: run(messages) returns the last chunk', async () => {
+  const s = await load('a/b', { caps, model, backends: [slowBackend([])] });
+  assert.deepEqual(await s.run(msg('hi')), { text: 'hi', tokens: 1 });
+});

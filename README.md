@@ -24,7 +24,9 @@ for await (const { text } of chat.generate([{ role: 'user', content: 'What does 
   show(text);
 ```
 
-The first load downloads the weights into the browser; later loads read them from there. Each back end's runtime loads
+Every session has `run(input)`: chat messages for text generation, a string or strings for embeddings, ImageData for
+vision, 16 kHz samples for speech. `load(repo, { task })` picks a task when a repo has more than one. The first load
+downloads the weights into the browser; later loads read them from there. Each back end's runtime loads
 from jsDelivr only when that back end is chosen.
 
 ## Why
@@ -44,6 +46,7 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 | `transformers` | transformers.js 4.3.1, ONNX text-generation | any onnx-community-style repo with a q4 or fp32 graph |
 | `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion` |
 | `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
+| `runntime` | runntime 0.1.0 (TypeGPU kernels): embeddings, speech to text, detection, depth, classification, privacy filter | the 11 Hub ids in `RUNNTIME_MODELS` |
 
 kohra and diskformer load from their `main` branches; set `kohraBackend.source` or `diskformerBackend.source` to pin a
 commit. `BACKENDS` lists the back ends `load()` asks by default: each joins after its browser test passes.
@@ -52,7 +55,7 @@ commit. `BACKENDS` lists the back ends `load()` asks by default: each joins afte
 
 `load()` throws an `AnyformerError` with code `NO_BACKEND` and the plan, naming each back end, its code and its
 reason. Codes are a closed set, each with one
-remedy in `REFUSALS`: `format`, `model`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
+remedy in `REFUSALS`: `format`, `model`, `task`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
 and `threw`. Every other failure is an `AnyformerError` too, with a code from `ERROR_CODES` (`LOAD_FAILED`,
 `BUDGET_TOO_SMALL`, `ABORTED`, `EXECUTION_FAILED`, `INVALID_ARGUMENT`, `DISPOSED`); check it with
 `isAnyformerError(e, code)`. A session runs one `generate()` at a time, in call order.
@@ -60,8 +63,8 @@ and `threw`. Every other failure is an `AnyformerError` too, with a code from `E
 ## Commands
 
 ```js
-plan(repo, { budget })            // what would run it, and why the others would not; loads nothing
-load(repo, { budget, maxCtx, onProgress, signal })  // → { backend, plan, generate(messages, opts), dispose() }
+plan(repo, { budget, task })      // what would run it, and why the others would not; loads nothing
+load(repo, { budget, task, maxCtx, onProgress, signal })  // → { backend, task, plan, run(input), generate?, dispose() }
 probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
 describe(repo)                    // Hub repo → formats, architecture, task, tags, files
 resolve(model, caps, backends, { budget })  // rank back ends for a described model
@@ -79,6 +82,8 @@ npm test                                   # Node: probe, describe, resolver, ba
 npm run test:browser -- probe              # headless Chrome: WebGPU, f16, OPFS
 npm run test:browser -- transformers       # Qwen2.5-0.5B answers on topic
 npm run test:browser -- kohra              # Qwen3-0.6B MDLM answers on topic
+npm run test:browser -- runntime-embed     # MiniLM embeddings rank a paraphrase above an unrelated sentence
+npm run test:browser -- runntime-detect    # YOLO26n finds both cats in cats.jpg
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```
 
@@ -88,4 +93,4 @@ from llama.cpp's by one character. Only Apple silicon (M4 Pro, Chrome) has run t
 ## License
 
 MIT. Spec and agent contract: [SPEC.md](SPEC.md) · depends on [diskformer.js](https://github.com/NakliTechie/diskformer.js)
-and [kohra](https://github.com/NakliTechie/kohra)
+· [kohra](https://github.com/NakliTechie/kohra) · [runntime](https://github.com/software-mansion/runntime)

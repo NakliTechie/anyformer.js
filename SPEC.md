@@ -14,7 +14,7 @@ be killed mid-turn, and must not burn a user's disk or bandwidth by guessing.
    fetches separately before deciding.
 2. **Closed vocabularies.** Errors from load() and a session are `AnyformerError` with `code` in `ERROR_CODES`
    (NO_BACKEND · LOAD_FAILED · BUDGET_TOO_SMALL+need · ABORTED · EXECUTION_FAILED · INVALID_ARGUMENT · DISPOSED),
-   checked by name and code (`isAnyformerError`), so two copies of the library agree. A refusal is `{code, reason, need?}` with `code` in `REFUSALS`: format · model · webgpu ·
+   checked by name and code (`isAnyformerError`), so two copies of the library agree. A refusal is `{code, reason, need?}` with `code` in `REFUSALS`: format · model · task · webgpu ·
    f16 · opfs · budget · threw. Each code has one remedy (`REFUSALS[code]`); `budget` carries `need`, the bytes that
    would pass. Tool consequences are `read` · `stages` · `mutates`. Tool errors are `{error}` data, never throws.
 3. **One verdict per next action.** `chosen` set → load. `chosen` null → read the codes: format/model → another repo;
@@ -47,8 +47,11 @@ tower ✓ · evaluator boundary ✓.
 
 - `load(repo, {budget, maxCtx, backends, onProgress, signal})` → `{backend, plan, generate(messages, {maxNewTokens, signal}),
   dispose()}`; `generate` yields `{text, tokens}`, `text` cumulative.
+- Tasks: `plan/load(repo, { task })`, default the repo's pipeline tag; every session has `run(input)`, text generation
+  also `generate()`. Back ends list their `tasks`.
 - Back ends: transformers.js 4.3.1 (ONNX text-generation, q4 first), kohra @main (text-diffusion ONNX), diskformer
-  @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs). kohra and diskformer load from their main branches;
+  @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs), runntime 0.1.0 (11 Hub ids: embeddings, speech, detection,
+  depth, classification, privacy filter). kohra and diskformer load from their main branches;
   `<backend>.source` pins another copy.
 - Agent face: 6 tools (probe, plan, load, generate, sessions, unload). Person-only acts: none.
 - Gaps: no wasm fallback (every back end needs WebGPU); one store per back end, not the shared OPFS store yet;

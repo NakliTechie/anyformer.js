@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>runntime-embed</title>
+<script type="module">
+import { load, runntimeBackend } from '../../index.js';
+import { run, log } from './harness.js';
+const cos = (a, b) => { let d = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return d / Math.sqrt(x * y); };
+run('runntime-embed', async () => {
+  const s = await load('Xenova/all-MiniLM-L6-v2', { backends: [runntimeBackend] });
+  log(`loaded by ${s.backend} for ${s.task}`);
+  const [cat, kitten, invoice] = await s.run(['A cat sleeps on the sofa.', 'A kitten naps on the couch.', 'The invoice is due on Friday.']);
+  const near = cos(cat, kitten), far = cos(cat, invoice);
+  await s.dispose();
+  // The two sentences about a sleeping cat sit closer together than either does to the invoice.
+  return { ok: cat.length === 384 && near > far + 0.2, backend: s.backend, task: s.task, dims: cat.length, near: +near.toFixed(3), far: +far.toFixed(3) };
+});
+</script>

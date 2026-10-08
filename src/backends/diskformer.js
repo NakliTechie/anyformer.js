@@ -36,10 +36,13 @@ export { budgetError };
 
 export const diskformerBackend = {
   id: 'diskformer',
+  // Gemma 4's repo is tagged image-text-to-text; the engines run its text turns.
+  tasks: ['text-generation', 'image-text-to-text'],
   source: 'https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@main/engines',
 
-  canRun(model, caps, { budget }) {
+  canRun(model, caps, { budget, task }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
+    if (task && !diskformerBackend.tasks.includes(task)) return { ok: false, code: 'task', reason: `task ${task}; diskformer engines run text generation only` };
     const m = match(model);
     if (!m) return { ok: false, code: 'model', reason: `no diskformer engine for this GGUF; engines cover ${DISKFORMER_MODELS.map((x) => x.file).join(', ')}` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
@@ -63,6 +66,7 @@ export const diskformerBackend = {
       });
     } catch (e) { throw budgetError(e) || e; }
     return {
+      task: 'text-generation',
       engine,
       async *generate(messages, { maxNewTokens = 512, signal } = {}) {
         for await (const r of engine.generate(messages, { maxNewTokens, signal, enableThinking: false }))

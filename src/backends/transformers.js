@@ -23,12 +23,13 @@ export const graphBytes = (model, file) =>
 
 export const transformersBackend = {
   id: 'transformers',
+  tasks: ['text-generation'],
 
-  canRun(model, caps) {
+  canRun(model, caps, { task } = {}) {
     if (!model.formats.includes('onnx')) return { ok: false, code: 'format', reason: 'no ONNX graph in the repo' };
     // kohra's diffusion graphs are ONNX too, but transformers.js generate() is autoregressive only.
     if (model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'a text-diffusion model; transformers.js generate() is autoregressive only' };
-    if (model.task !== 'text-generation') return { ok: false, code: 'model', reason: `task ${model.task || 'unknown'}; this back end runs text-generation only` };
+    if ((task || model.task) !== 'text-generation') return { ok: false, code: 'task', reason: `task ${task || model.task || 'unknown'}; this back end runs text-generation only` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     const dtype = pickDtype(model, caps);
     if (!dtype) return { ok: false, code: 'format', reason: `no ONNX graph at ${Object.values(FILES).join(', ')}` };
@@ -45,6 +46,7 @@ export const transformersBackend = {
     });
     signal?.throwIfAborted();
     return {
+      task: 'text-generation',
       async *generate(messages, { maxNewTokens = 256, signal } = {}) {
         // TextStreamer is callback-based; a queue turns it into the contract's async iterable.
         const queue = [];
