@@ -21,13 +21,20 @@ function noBackend(plan) {
 
 // What load() would do, without loading: the descriptor, the caps, and every back end's answer.
 // task: a Hugging Face pipeline task ('text-generation', 'feature-extraction', …); null runs the repo's own.
-export async function plan(repo, { budget = DEFAULT_BUDGET, task = null, backends = BACKENDS, caps, model, fetch } = {}) {
+// repo: a Hub id, or an entry from MODELS (its task and budget apply unless opts set them).
+const entry = (repo, opts) => (typeof repo === 'object' && repo?.repo
+  ? [repo.repo, { ...(repo.task && { task: repo.task }), ...(repo.budget && { budget: repo.budget }), ...opts }]
+  : [repo, opts]);
+
+export async function plan(repoOrEntry, opts = {}) {
+  let [repo, { budget = DEFAULT_BUDGET, task = null, backends = BACKENDS, caps, model, fetch }] = entry(repoOrEntry, opts);
   caps ??= await probe();
   model ??= await describe(repo, fetch ? { fetch } : {});
   return { model, caps, budget, task, ...(await resolve(model, caps, backends, { budget, task })) };
 }
 
-export async function load(repo, opts = {}) {
+export async function load(repoOrEntry, options = {}) {
+  const [repo, opts] = entry(repoOrEntry, options);
   const { backends = BACKENDS, maxCtx, onProgress, signal } = opts;
   let p;
   try { p = await plan(repo, opts); } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${repo}: `); }

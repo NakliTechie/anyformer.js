@@ -23,7 +23,7 @@ test('manifest lint: closed consequence set, object schemas, required inputs dec
 });
 
 test('parity: the manifest covers every command of the public API', () => {
-  const commands = ['probe', 'plan', 'load', 'generate', 'sessions', 'unload'];
+  const commands = ['models', 'probe', 'plan', 'load', 'generate', 'sessions', 'unload', 'stored', 'remove'];
   assert.deepEqual(TOOLS.map((t) => t.name.replace('anyformer_', '')).sort(), commands.sort());
 });
 
@@ -61,4 +61,11 @@ test('registerTools publishes the same entries through WebMCP and window', async
   assert.deepEqual(Object.keys(target.anyformer.tools), names);
   await registered.find((t) => t.name === 'anyformer_sessions').execute({});
   assert.equal(journal.at(-1).door, 'modelContext');
+});
+
+test('remove stages without confirm; stored and models read', async () => {
+  const r = await call('anyformer_remove', { repo: 'a/b' });
+  assert.deepEqual(r, { removed: false, staged: true, would: [] });
+  assert.deepEqual(await call('anyformer_stored'), []);
+  assert.ok((await call('anyformer_models')).chat.DEFAULT.repo);
 });

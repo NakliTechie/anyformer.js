@@ -2,12 +2,15 @@
 // through WebMCP (navigator.modelContext) where the browser has it and as window.anyformer.tools otherwise. Tests drive
 // this manifest, not the functions behind it.
 //
-// Consequence classes: 'read' runs freely; 'stages' (anyformer_load) downloads weights to disk and fills the GPU, so it
-// lands only when the call accepts the plan's disk bytes, otherwise it returns the plan and loads nothing.
+// Consequence classes: 'read' runs freely; 'stages' lands only when the call accepts the consequence, otherwise it
+// returns what would happen: anyformer_load (downloads weights, fills the GPU) needs acceptDiskBytes, anyformer_remove
+// (deletes a downloaded model; the next load downloads it again) needs confirm.
 // Person-only acts: none. anyformer has no act whose point is the person's own authorship or consent.
 
 import { probe } from './probe.js';
 import { plan, load } from './load.js';
+import { MODELS } from './models.js';
+import { stored, remove } from './store.js';
 
 // Options every tool call passes to plan() and load(): a page sets backends or budget here; tests inject caps and fetch.
 export const toolOptions = {};
@@ -37,6 +40,12 @@ export const TOOLS = [
     description: 'What this browser can run: WebGPU, shader-f16, subgroups, buffer limits, adapter, OPFS quota, memory64.',
     inputSchema: { type: 'object', properties: {} },
     handler: () => probe(),
+  },
+  {
+    name: 'anyformer_models', consequence: 'read',
+    description: 'Models that pass a browser test through anyformer, by family (chat, embedding, objectDetection): repo, back end, task, budget, download size. Pass a repo to anyformer_plan or anyformer_load.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: () => MODELS,
   },
   {
     name: 'anyformer_plan', consequence: 'read',
@@ -85,6 +94,21 @@ export const TOOLS = [
     description: 'The loaded models, and the last 50 tool calls with the door each came through.',
     inputSchema: { type: 'object', properties: {} },
     handler: () => ({ sessions: [...sessions].map(([id, e]) => ({ session: id, repo: e.repo, backend: e.backend })), journal }),
+  },
+  {
+    name: 'anyformer_stored', consequence: 'read',
+    description: 'Models downloaded into this browser: back end, repo, bytes.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: () => stored(),
+  },
+  {
+    name: 'anyformer_remove', consequence: 'stages',
+    description: 'Delete a downloaded model from this browser. Without confirm: true it returns what it would delete and deletes nothing. The next load downloads it again.',
+    inputSchema: { type: 'object', required: ['repo'], properties: { repo, confirm: { type: 'boolean' } } },
+    handler: async ({ repo, confirm }) => {
+      if (confirm !== true) return { removed: false, staged: true, would: (await stored()).filter((r) => r.repo === repo) };
+      return { removed: true, ...(await remove(repo)) };
+    },
   },
   {
     name: 'anyformer_unload', consequence: 'read',

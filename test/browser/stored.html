@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>stored</title>
+<!-- Lists the store and changes nothing. Run against the diskformer-chat profile to see the Gemma store:
+     node test/browser/run.mjs stored --port 8192 --profile ~/.cache/anyformer-chat-profile -->
+<script type="module">
+import { stored } from '../../index.js';
+import { run } from './harness.js';
+run('stored', async () => { const rows = await stored(); return { ok: true, rows }; });
+</script>

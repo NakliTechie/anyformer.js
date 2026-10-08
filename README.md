@@ -67,12 +67,16 @@ load(repo, { budget, task, maxCtx, onProgress, signal })  // → { backend, task
 probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
 describe(repo)                    // Hub repo → formats, architecture, task, tags, files
 resolve(model, caps, backends, { budget })  // rank back ends for a described model
+stored() · remove(repo)           // what is downloaded in this browser; delete one
+MODELS.chat.DEFAULT               // models that pass a browser test; load(MODELS.chat.GEMMA4_26B_A4B) works too
 registerTools()                   // publish the agent face (below)
 ```
 
-Agents get the same calls as tools (`anyformer_probe`, `_plan`, `_load`, `_generate`, `_sessions`, `_unload`) through
+Agents get the same calls as tools (`anyformer_models`, `_probe`, `_plan`, `_load`, `_generate`, `_sessions`, `_unload`,
+`_stored`, `_remove`) through
 WebMCP's `navigator.modelContext` where the browser has it and `window.anyformer.tools` otherwise; `anyformer_load`
-loads nothing until the caller accepts the plan's disk bytes.
+loads nothing until the caller accepts the plan's disk bytes, and `anyformer_remove` deletes nothing without
+`confirm: true`.
 
 ## Verify it yourself
 
@@ -83,6 +87,7 @@ npm run test:browser -- transformers       # Qwen2.5-0.5B answers on topic
 npm run test:browser -- kohra              # Qwen3-0.6B MDLM answers on topic
 npm run test:browser -- embed             # MiniLM embeddings rank a paraphrase above an unrelated sentence
 npm run test:browser -- detect            # DETR finds both cats in cats.jpg
+npm run test:browser -- store             # list a download, remove it
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```
 

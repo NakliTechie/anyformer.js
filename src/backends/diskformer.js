@@ -61,7 +61,8 @@ export const diskformerBackend = {
     let engine;
     try {
       engine = await mod[m.Engine].load(null, {
-        gpuBudgetBytes: budget, maxCtx, signal,
+        // The engines' own default root, named so the store module (src/store.js) lists the same folder.
+        gpuBudgetBytes: budget, maxCtx, signal, root: 'localmind-ssd',
         onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
       });
     } catch (e) { throw budgetError(e) || e; }

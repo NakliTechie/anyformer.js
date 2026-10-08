@@ -8,3 +8,5 @@ export { transformersBackend } from './src/backends/transformers.js';
 export { kohraBackend } from './src/backends/kohra.js';
 export { diskformerBackend, DISKFORMER_MODELS } from './src/backends/diskformer.js';
 export { TOOLS, call, registerTools, journal, toolOptions } from './src/tools.js';
+export { MODELS } from './src/models.js';
+export { stored, remove } from './src/store.js';

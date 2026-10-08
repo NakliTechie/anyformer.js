@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>store</title>
+<script type="module">
+import { load, stored, remove, call, MODELS } from '../../index.js';
+import { run, log } from './harness.js';
+run('store', async () => {
+  const before = await stored();
+  const s = await load(MODELS.embedding.DEFAULT);
+  await s.run('warm up');
+  await s.dispose();
+  const after = await stored();
+  const row = after.find((r) => r.repo === MODELS.embedding.DEFAULT.repo);
+  log(`stored: ${JSON.stringify(after)}`);
+  const staged = await call('anyformer_remove', { repo: row?.repo });       // the agent door: stages, deletes nothing
+  const still = (await stored()).some((r) => r.repo === row?.repo);
+  const gone = await remove(row.repo);
+  const left = (await stored()).some((r) => r.repo === row.repo);
+  return { ok: !before.length && row?.bytes > 50e6 && staged.staged && still && gone.bytes === row.bytes && !left,
+    row, freed: gone.bytes, stagedKeptIt: still, removed: !left };
+});
+</script>

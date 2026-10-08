@@ -11,6 +11,8 @@ and exits 0 on pass, 1 on fail, 2 on timeout.
 | `kohra` | naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX replies in English through the kohra back end |
 | `embed` | Xenova/all-MiniLM-L6-v2: 384-dim vectors, the two cat sentences closer than the invoice |
 | `detect` | Xenova/detr-resnet-50 finds both cats in transformers.js's `cats.jpg` |
+| `store` | MiniLM appears in `stored()` after a load; the agent tool stages; `remove()` frees the same bytes |
+| `stored` | lists the store, changes nothing (run with the chat profile to see Gemma) |
 | `diskformer-chat` | Gemma 4 26B-A4B at a 2.5 GB budget: 9/9 replies identical to llama.cpp b9830 (diskformer's chat gate) |
 
 ```bash

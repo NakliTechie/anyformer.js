@@ -53,6 +53,8 @@ tower ✓ · evaluator boundary ✓.
   @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs). transformers.js also runs feature-extraction, speech recognition, object
   detection, image classification, depth, segmentation, token and text classification on fp32 graphs. kohra and diskformer load from their main branches;
   `<backend>.source` pins another copy.
-- Agent face: 6 tools (probe, plan, load, generate, sessions, unload). Person-only acts: none.
-- Gaps: no wasm fallback (every back end needs WebGPU); one store per back end, not the shared OPFS store yet;
+- Agent face: 9 tools (models, probe, plan, load, generate, sessions, unload, stored, remove). Person-only acts: none.
+- `MODELS`: tested entries by family; `load(entry)`. `stored()` / `remove(repo)` over the transformers.js cache and
+  diskformer's OPFS stores.
+- Gaps: no wasm fallback (every back end needs WebGPU); one store per back end, not the shared OPFS store yet (kohra's graph is in the HTTP cache, unlisted);
   llama.cpp-webgpu not started; speed estimates exist for diskformer only.
