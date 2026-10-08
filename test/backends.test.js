@@ -77,3 +77,14 @@ test('diskformer: the engine\'s load-time budget refusal becomes BUDGET_TOO_SMAL
   assert.equal(e.need, 3.09e9);
   assert.equal(budgetError(new Error('no WebGPU adapter')), null);
 });
+
+const mini = fixture('Xenova_all-MiniLM-L6-v2');
+const detr = fixture('Xenova_detr-resnet-50');
+
+test('transformers: non-generation tasks run on the fp32 graph; unknown tasks refuse with code task', () => {
+  const e = transformersBackend.canRun(mini, full, B);
+  assert.equal(e.ok, true);
+  assert.equal(e.estimate.gpuBytes, mini.files.onnx.find((f) => f.name === 'onnx/model.onnx').size);
+  assert.equal(transformersBackend.canRun(detr, full, B).ok, true);
+  assert.equal(transformersBackend.canRun(mini, full, { ...B, task: 'text-to-speech' }).code, 'task');
+});

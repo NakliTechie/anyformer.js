@@ -1,0 +1,117 @@
+{
+ "id": "Xenova/all-MiniLM-L6-v2",
+ "sha": "751bff37182d3f1213fa05d7196b954e230abad9",
+ "pipeline_tag": "feature-extraction",
+ "tags": [
+  "transformers.js",
+  "onnx",
+  "bert",
+  "feature-extraction",
+  "base_model:sentence-transformers/all-MiniLM-L6-v2",
+  "base_model:quantized:sentence-transformers/all-MiniLM-L6-v2",
+  "license:apache-2.0",
+  "region:us"
+ ],
+ "siblings": [
+  {
+   "rfilename": "config.json",
+   "blobId": "72147e4ff4426ebedbfa2146c4a0999def51a313",
+   "size": 650
+  },
+  {
+   "rfilename": "onnx/model.onnx",
+   "blobId": "e0fdb34b85735f843316aa3604c431583a53b13b",
+   "size": 90387606,
+   "lfs": {
+    "sha256": "759c3cd2b7fe7e93933ad23c4c9181b7396442a2ed746ec7c1d46192c469c46e",
+    "size": 90387606,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_bnb4.onnx",
+   "blobId": "85f27eead6c3c432611f59721ce497bab4d22e30",
+   "size": 53915448,
+   "lfs": {
+    "sha256": "106c4807d85ceaf3590d9da9c07b3a22ded29bcc0d47333da0b1b741410eb128",
+    "size": 53915448,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_fp16.onnx",
+   "blobId": "fad6b714b903b5157108e0bfa51541cfa016ea2e",
+   "size": 45297825,
+   "lfs": {
+    "sha256": "2cdb5e58291813b6d6e248ed69010100246821a367fa17b1b81ae9483744533d",
+    "size": 45297825,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_int8.onnx",
+   "blobId": "bdb02d11c4446148e92a9210ab4d1013b3450a72",
+   "size": 22972370,
+   "lfs": {
+    "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
+    "size": 22972370,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4.onnx",
+   "blobId": "3c0eed434497cf84d512a9eb2de37f1bbc0a5d78",
+   "size": 54578772,
+   "lfs": {
+    "sha256": "ac0f989345605769651a18bb796fda6235d921a37bd4ac065cb51781da44d079",
+    "size": 54578772,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4f16.onnx",
+   "blobId": "63673258e739b4b1303344dca3e7430dd5883267",
+   "size": 30018257,
+   "lfs": {
+    "sha256": "eb08a666c46109637e0b6cb04f6052a68efd59bb0252d4e0438d28fb6b2d853d",
+    "size": 30018257,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_quantized.onnx",
+   "blobId": "bdb02d11c4446148e92a9210ab4d1013b3450a72",
+   "size": 22972370,
+   "lfs": {
+    "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1",
+    "size": 22972370,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_uint8.onnx",
+   "blobId": "017f5b54063b56620e1b45e2ae57e51e58327ebb",
+   "size": 22845806,
+   "lfs": {
+    "sha256": "57097fb267dcffb2a9f12fba945201c76ae99b7640ed1c6389cc9e0341c71ee6",
+    "size": 22845806,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "special_tokens_map.json",
+   "blobId": "a8b3208c2884c4efb86e49300fdd3dc877220cdf",
+   "size": 125
+  },
+  {
+   "rfilename": "tokenizer.json",
+   "blobId": "c17ed520ed8438736732a54957a69306b8822215",
+   "size": 711661
+  },
+  {
+   "rfilename": "tokenizer_config.json",
+   "blobId": "37fca74771bc76a8e01178ce3a6055a0995f8093",
+   "size": 366
+  }
+ ]
+}

@@ -50,8 +50,8 @@ tower ✓ · evaluator boundary ✓.
 - Tasks: `plan/load(repo, { task })`, default the repo's pipeline tag; every session has `run(input)`, text generation
   also `generate()`. Back ends list their `tasks`.
 - Back ends: transformers.js 4.3.1 (ONNX text-generation, q4 first), kohra @main (text-diffusion ONNX), diskformer
-  @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs), runntime 0.1.0 (11 Hub ids: embeddings, speech, detection,
-  depth, classification, privacy filter). kohra and diskformer load from their main branches;
+  @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs). transformers.js also runs feature-extraction, speech recognition, object
+  detection, image classification, depth, segmentation, token and text classification on fp32 graphs. kohra and diskformer load from their main branches;
   `<backend>.source` pins another copy.
 - Agent face: 6 tools (probe, plan, load, generate, sessions, unload). Person-only acts: none.
 - Gaps: no wasm fallback (every back end needs WebGPU); one store per back end, not the shared OPFS store yet;

@@ -1,4 +1,4 @@
-// transformers.js: autoregressive ONNX text generation on WebGPU. The library loads from the CDN at load() time, so
+// transformers.js: ONNX models on WebGPU, text generation plus the other pipeline tasks below. The library loads from the CDN at load() time, so
 // importing anyformer costs nothing until this back end is chosen.
 
 const VERSION = '4.3.1';
@@ -21,28 +21,55 @@ export const graphBytes = (model, file) =>
   model.files.all.filter((f) => f.name === file || f.name.startsWith(`${file}.data`) || f.name.startsWith(`${file}_data`))
     .reduce((n, f) => n + (f.size || 0), 0);
 
+// The non-generation tasks this back end runs, each through transformers.js's own pipeline(). They load the fp32
+// graphs: the f16 paths gave wrong output on Metal for text generation, and these models are small.
+const PIPELINES = {
+  'feature-extraction': { options: { pooling: 'mean', normalize: true }, out: (t) => t.tolist() },
+  'sentence-similarity': { task: 'feature-extraction', options: { pooling: 'mean', normalize: true }, out: (t) => t.tolist() },
+  'automatic-speech-recognition': {},
+  'object-detection': { image: true },
+  'image-classification': { image: true },
+  'depth-estimation': { image: true },
+  'image-segmentation': { image: true },
+  'token-classification': {},
+  'text-classification': {},
+};
+
+// fp32 graphs: onnx/*.onnx without a precision suffix (model.onnx, encoder_model.onnx, decoder_model_merged.onnx).
+const FP32 = /^onnx\/[a-z_]+(?<!_fp16|_q4|_q4f16|_quantized|_int8|_uint8|_bnb4|_q8)\.onnx$/;
+const fp32Bytes = (model) => model.files.onnx.filter((f) => FP32.test(f.name)).reduce((n, f) => n + graphBytes(model, f.name), 0);
+
 export const transformersBackend = {
   id: 'transformers',
-  tasks: ['text-generation'],
+  tasks: ['text-generation', ...Object.keys(PIPELINES)],
 
   canRun(model, caps, { task } = {}) {
     if (!model.formats.includes('onnx')) return { ok: false, code: 'format', reason: 'no ONNX graph in the repo' };
     // kohra's diffusion graphs are ONNX too, but transformers.js generate() is autoregressive only.
     if (model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'a text-diffusion model; transformers.js generate() is autoregressive only' };
-    if ((task || model.task) !== 'text-generation') return { ok: false, code: 'task', reason: `task ${task || model.task || 'unknown'}; this back end runs text-generation only` };
+    const want = task || model.task;
+    if (!transformersBackend.tasks.includes(want)) return { ok: false, code: 'task', reason: `task ${want || 'unknown'}; this back end runs ${transformersBackend.tasks.join(', ')}` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
+    if (want !== 'text-generation') {
+      const bytes = fp32Bytes(model);
+      if (!bytes) return { ok: false, code: 'format', reason: 'no fp32 ONNX graph (onnx/model.onnx or encoder/decoder graphs)' };
+      return { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } };
+    }
     const dtype = pickDtype(model, caps);
     if (!dtype) return { ok: false, code: 'format', reason: `no ONNX graph at ${Object.values(FILES).join(', ')}` };
     const bytes = graphBytes(model, FILES[dtype]);
     return { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } };
   },
 
-  async load(model, { caps, onProgress, signal }) {
+  async load(model, { task, caps, onProgress, signal }) {
+    const want = task || model.task;
+    const lib = await import(CDN);
+    const progress_callback = onProgress && ((p) => onProgress({ backend: 'transformers', ...p }));
+    if (want !== 'text-generation') return loadPipeline(lib, model, want, { progress_callback, signal });
     const dtype = pickDtype(model, caps);
-    const { pipeline, TextStreamer, InterruptableStoppingCriteria } = await import(CDN);
+    const { pipeline, TextStreamer, InterruptableStoppingCriteria } = lib;
     const gen = await pipeline('text-generation', model.repo, {
-      device: 'webgpu', dtype, revision: model.revision || 'main',
-      progress_callback: onProgress && ((p) => onProgress({ backend: 'transformers', ...p })),
+      device: 'webgpu', dtype, revision: model.revision || 'main', progress_callback,
     });
     signal?.throwIfAborted();
     return {
@@ -72,3 +99,22 @@ export const transformersBackend = {
     };
   },
 };
+
+// A non-generation task: one pipeline, run(input, opts) calls it. ImageData (from a canvas) becomes a RawImage; URLs,
+// RawImage and, for speech, 16 kHz Float32Array samples pass through as transformers.js takes them.
+async function loadPipeline(lib, model, task, { progress_callback, signal }) {
+  const spec = PIPELINES[task];
+  const pipe = await lib.pipeline(spec.task || task, model.repo, {
+    device: 'webgpu', dtype: 'fp32', revision: model.revision || 'main', progress_callback,
+  });
+  signal?.throwIfAborted();
+  const image = (x) => (typeof ImageData !== 'undefined' && x instanceof ImageData ? new lib.RawImage(x.data, x.width, x.height, 4) : x);
+  return {
+    task,
+    async run(input, opts = {}) {
+      const out = await pipe(spec.image ? image(input) : input, { ...spec.options, ...opts });
+      return spec.out ? spec.out(out) : out;
+    },
+    dispose: () => pipe.dispose?.(),
+  };
+}

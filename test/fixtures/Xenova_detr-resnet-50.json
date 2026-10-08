@@ -1,0 +1,96 @@
+{
+ "id": "Xenova/detr-resnet-50",
+ "sha": "8be7ab59ff663484ee9ba2e8d8f267330d5ad03e",
+ "pipeline_tag": "object-detection",
+ "tags": [
+  "transformers.js",
+  "onnx",
+  "detr",
+  "object-detection",
+  "base_model:facebook/detr-resnet-50",
+  "base_model:quantized:facebook/detr-resnet-50",
+  "region:us"
+ ],
+ "siblings": [
+  {
+   "rfilename": "config.json",
+   "blobId": "187e26c395d2e1e140dda9a222c2a7bf0d86c2fb",
+   "size": 4812
+  },
+  {
+   "rfilename": "onnx/model.onnx",
+   "blobId": "e96329dc321590a9618be7fa48ea91c2f3671e5b",
+   "size": 166789212,
+   "lfs": {
+    "sha256": "5dffb3205e68b0be1686eea283ecf87e7592d3dceed5dfc83249f7303e9e95e8",
+    "size": 166789212,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "onnx/model_bnb4.onnx",
+   "blobId": "dbd61160588c3410fb80b2a7f6d022b1896fb041",
+   "size": 106776417,
+   "lfs": {
+    "sha256": "8d740c2650087028b10015ba22dda7f075f791056e4db3623804db52306f0201",
+    "size": 106776417,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "onnx/model_fp16.onnx",
+   "blobId": "4e40a5259cc7daaf1d9297f38401320588497a3e",
+   "size": 83812437,
+   "lfs": {
+    "sha256": "dd346adcf8a9aa59c15d4e4cb884227fa617ea509834229dc33195145bbc4e0e",
+    "size": 83812437,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4.onnx",
+   "blobId": "114747b1595f947c81bdeac67c6c9039681ac329",
+   "size": 107866715,
+   "lfs": {
+    "sha256": "b41bf93e86686e4247c2a5d684bdce1a88ce9ef5f299038c99677444f870e6a2",
+    "size": 107866715,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "onnx/model_q4f16.onnx",
+   "blobId": "c43426a45b0c2cab9df3322a4b4ad66ec4242a08",
+   "size": 58545965,
+   "lfs": {
+    "sha256": "8f26dbd9c4485f160a0a4a93fe3238ad3c8797f9bd8f444e21cf8a6d704817ef",
+    "size": 58545965,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_quantized.onnx",
+   "blobId": "cf27f3912ebbbe936fd120c4fc96e500631b0404",
+   "size": 43102531,
+   "lfs": {
+    "sha256": "cae09a307ed9247da7e2ce8bcf81522a6817f1ea2e82b9c4dde59f5964b62b4f",
+    "size": 43102531,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "onnx/model_uint8.onnx",
+   "blobId": "f7b2ace1f45bca68b6c42ce68464eb8223efb136",
+   "size": 42680347,
+   "lfs": {
+    "sha256": "5392e8cd0df04c8c33a87d96ca9ad0c9ef2dca9a14d7d75e853823e525261fb3",
+    "size": 42680347,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "preprocessor_config.json",
+   "blobId": "b17a52dcec6f0479526496011f6e1d94dc47537c",
+   "size": 455
+  }
+ ]
+}
