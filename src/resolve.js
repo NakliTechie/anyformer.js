@@ -7,8 +7,8 @@
 //             estimate = { gpuBytes, diskBytes, tokPerSec | null }. No network, no GPU allocation: it reads the
 //             descriptor and caps only. code is one of REFUSALS below; need is the budget that would pass, with
 //             code 'budget'. A throw counts as code 'threw' with the message as the reason.
-//   load(model, { budget, caps, maxCtx, onProgress, signal }) → session   (maxCtx: tokens; undefined = the back
-//             end's default)
+//   load(model, { budget, caps, maxCtx, dtype, onProgress, signal }) → session   (maxCtx: tokens; dtype: a precision
+//             the back end offers, e.g. 'q4f16' for transformers.js; undefined = the back end's default)
 //             session = { run(input, opts) → result, dispose() }; a text-generation session also has
 //             generate(messages, opts) → async iterable of { text, tokens }, and run(messages) is its last chunk.
 //   task is the requested pipeline task, or null for the repo's own (model.task).

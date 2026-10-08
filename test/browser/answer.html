@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>answer</title>
+<!-- One greedy reply through anyformer, for bench/parity.mjs and bench/speed.mjs: ?repo= ?budget=GB ?n=tokens ?prompt=
+     ?dtype= (a precision the back end offers) ?rp= (repetition penalty)
+     ?runs=N repeats the same request N times (run 1 is the warm-up when timing). -->
+<script type="module">
+import { load } from '../../index.js';
+import { run, log } from './harness.js';
+const q = new URLSearchParams(location.search);
+run('answer', async () => {
+  const s = await load(q.get('repo'), { budget: Number(q.get('budget') || 2.5) * 1e9, ...(q.get('dtype') && { dtype: q.get('dtype') }) });
+  log(`loaded by ${s.backend}`);
+  const runs = [];
+  for (let i = 0; i < Number(q.get('runs') || 1); i++) {
+    const t0 = performance.now();
+    let first = 0, last = 0, text = '', tokens = 0;
+    for await (const c of s.generate([{ role: 'user', content: q.get('prompt') }], { maxNewTokens: Number(q.get('n') || 64), repetitionPenalty: Number(q.get('rp') || 1) })) {
+      const now = performance.now();
+      if (!first) first = now;
+      last = now; text = c.text; tokens = c.tokens;
+    }
+    runs.push({ ttftMs: first - t0, decodeMs: last - first, text, tokens });
+    log(`run ${i + 1}: ${tokens} tokens`);
+  }
+  await s.dispose();
+  return { ok: true, backend: s.backend, runs };
+});
+</script>

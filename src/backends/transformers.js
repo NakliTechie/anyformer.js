@@ -1,8 +1,6 @@
 // transformers.js: ONNX models on WebGPU, text generation plus the other pipeline tasks below. The library loads from the CDN at load() time, so
 // importing anyformer costs nothing until this back end is chosen.
 
-const VERSION = '4.3.1';
-const CDN = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${VERSION}/+esm`;
 
 // dtype → the ONNX file transformers.js reads for it (decoder-only repos keep one graph per dtype under onnx/).
 const FILES = {
@@ -60,6 +58,8 @@ const fp32Bytes = (model) => model.files.onnx.filter((f) => FP32.test(f.name)).r
 
 export const transformersBackend = {
   id: 'transformers',
+  // The library, pinned. Set transformersBackend.source to load another version.
+  source: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm',
   tasks: ['text-generation', ...Object.keys(PIPELINES)],
 
   canRun(model, caps, { task, budget = Infinity } = {}) {
@@ -92,21 +92,22 @@ export const transformersBackend = {
     return fits(bytes, { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } });
   },
 
-  async load(model, { task, caps, onProgress, signal }) {
+  // dtype overrides the precision pick (the repo must ship it). generate() takes repetitionPenalty (default 1, none).
+  async load(model, { task, caps, dtype: forced, onProgress, signal }) {
     const want = task || model.task || 'text-generation';
-    const lib = await import(CDN);
+    const lib = await import(transformersBackend.source);
     const progress_callback = onProgress && ((p) => onProgress({ backend: 'transformers', ...p }));
-    if (isMultimodal(model)) return loadMultimodal(lib, model, pickMmDtype(model, caps), { progress_callback, signal });
+    if (isMultimodal(model)) return loadMultimodal(lib, model, forced || pickMmDtype(model, caps), { progress_callback, signal });
     if (want !== 'text-generation') return loadPipeline(lib, model, want, { progress_callback, signal });
-    const dtype = pickDtype(model, caps);
+    const dtype = forced || pickDtype(model, caps);
     const gen = await lib.pipeline('text-generation', model.repo, {
       device: 'webgpu', dtype, revision: model.revision || 'main', progress_callback,
     });
     signal?.throwIfAborted();
     return {
       task: 'text-generation',
-      generate: (messages, { maxNewTokens = 256, signal } = {}) => stream(lib, gen.tokenizer, signal,
-        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, streamer, stopping_criteria })),
+      generate: (messages, { maxNewTokens = 256, repetitionPenalty = 1, signal } = {}) => stream(lib, gen.tokenizer, signal,
+        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, repetition_penalty: repetitionPenalty, streamer, stopping_criteria })),
       dispose: () => gen.dispose?.(),
     };
   },
@@ -166,7 +167,7 @@ async function loadMultimodal(lib, model, dtype, { progress_callback, signal }) 
     : typeof x === 'string' ? lib.load_image(x) : x);
   return {
     task: 'text-generation',
-    generate: (messages, { maxNewTokens = 256, signal } = {}) => stream(lib, processor.tokenizer, signal, async (streamer, stopping_criteria) => {
+    generate: (messages, { maxNewTokens = 256, repetitionPenalty = 1, signal } = {}) => stream(lib, processor.tokenizer, signal, async (streamer, stopping_criteria) => {
       const images = [], audios = [];
       const plain = messages.map((m) => (typeof m.content === 'string' ? m : {
         ...m,
@@ -180,7 +181,7 @@ async function loadMultimodal(lib, model, dtype, { progress_callback, signal }) 
       const imgs = await Promise.all(images.map(toImage));
       const one = (a) => (a.length ? (a.length === 1 ? a[0] : a) : null);
       const inputs = await processor(prompt, one(imgs), one(audios), { add_special_tokens: false });
-      return net.generate({ ...inputs, max_new_tokens: maxNewTokens, do_sample: false, streamer, stopping_criteria });
+      return net.generate({ ...inputs, max_new_tokens: maxNewTokens, do_sample: false, repetition_penalty: repetitionPenalty, streamer, stopping_criteria });
     }),
     dispose: () => net.dispose?.(),
   };

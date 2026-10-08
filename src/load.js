@@ -36,14 +36,14 @@ export async function plan(repoOrEntry, opts = {}) {
 
 export async function load(repoOrEntry, options = {}) {
   const [repo, opts] = entry(repoOrEntry, options);
-  const { backends = BACKENDS, maxCtx, onProgress, signal } = opts;
+  const { backends = BACKENDS, maxCtx, dtype, onProgress, signal } = opts;
   let p;
   try { p = await plan(repo, opts); } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${repo}: `); }
   if (!p.chosen) throw noBackend(p);
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, caps: p.caps, maxCtx, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, caps: p.caps, maxCtx, dtype, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   return { backend: backend.id, task: session.task || p.task || p.model.task || null, plan: p, ...serialize(session) };
 }
