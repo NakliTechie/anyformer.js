@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>pipeline</title>
+<!-- transformers.js-shaped pipeline() on a GGUF: run with the chat port and profile so Gemma is already stored:
+     node test/browser/run.mjs pipeline --port 8192 --profile ~/.cache/anyformer-chat-profile -->
+<script type="module">
+import { pipeline } from '../../index.js';
+import { run, log, onTopic } from './harness.js';
+run('pipeline', async () => {
+  const gen = await pipeline('text-generation', 'google/gemma-4-26B-A4B-it-qat-q4_0-gguf', { budget: 2.5e9 });
+  log(`backend ${gen.backend}`);
+  const [{ generated_text }] = await gen([{ role: 'user', content: 'Explain what a CPU does in two sentences.' }], { max_new_tokens: 32 });
+  await gen.dispose();
+  const reply = generated_text.at(-1);
+  return { ok: gen.backend === 'diskformer' && reply.role === 'assistant' && onTopic(reply.content), backend: gen.backend, reply: reply.content };
+});
+</script>

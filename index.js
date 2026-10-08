@@ -10,3 +10,4 @@ export { diskformerBackend, DISKFORMER_MODELS } from './src/backends/diskformer.
 export { TOOLS, call, registerTools, journal, toolOptions } from './src/tools.js';
 export { MODELS } from './src/models.js';
 export { stored, remove } from './src/store.js';
+export { pipeline } from './src/pipeline.js';

@@ -73,6 +73,7 @@ and `threw`. Every other failure is an `AnyformerError` too, with a code from `E
 ```js
 plan(repo, { budget, task })      // what would run it, and why the others would not; loads nothing
 load(repo, { budget, task, maxCtx, onProgress, signal })  // → { backend, task, plan, run(input), generate?, dispose() }
+pipeline(task, repo, { budget })  // transformers.js's call shape: gen(messages) → [{ generated_text }]
 probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
 describe(repo)                    // Hub repo → formats, architecture, task, tags, files
 resolve(model, caps, backends, { budget })  // rank back ends for a described model
@@ -97,6 +98,7 @@ npm run test:browser -- kohra              # Qwen3-0.6B MDLM answers on topic
 npm run test:browser -- embed             # MiniLM embeddings rank a paraphrase above an unrelated sentence
 npm run test:browser -- detect            # DETR finds both cats in cats.jpg
 npm run test:browser -- examples/chat/index.html --query "auto=1"   # the workbench loads and answers
+npm run test:browser -- pipeline --port 8192 --profile ~/.cache/anyformer-chat-profile   # pipeline() on a GGUF
 npm run test:browser -- store             # list a download, remove it
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```
