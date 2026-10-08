@@ -88,3 +88,17 @@ test('transformers: non-generation tasks run on the fp32 graph; unknown tasks re
   assert.equal(transformersBackend.canRun(detr, full, B).ok, true);
   assert.equal(transformersBackend.canRun(mini, full, { ...B, task: 'text-to-speech' }).code, 'task');
 });
+
+test('transformers multimodal: gemma4 and qwen3_5 repos run as chat at q4f16, every module counted, budget enforced', () => {
+  const q35 = fixture('onnx-community_Qwen3.5-4B-ONNX-OPT');
+  const e2b = fixture('onnx-community_gemma-4-E2B-it-ONNX');
+  const r = transformersBackend.canRun(q35, full, { budget: 8e9 });
+  assert.equal(r.ok, true);
+  const q4f16 = q35.files.all.filter((f) => /^onnx\/[a-z_]+_q4f16\.onnx/.test(f.name)).reduce((n, f) => n + f.size, 0);
+  assert.equal(r.estimate.gpuBytes, q4f16);
+  assert.equal(transformersBackend.canRun(e2b, full, { budget: 8e9, task: 'any-to-any' }).ok, true);
+  assert.equal(transformersBackend.canRun(e2b, full, { budget: 8e9, task: 'feature-extraction' }).code, 'task');
+  const tight = transformersBackend.canRun(e2b, full, { budget: 2.5e9 });
+  assert.equal(tight.code, 'budget');
+  assert.ok(tight.need > 3e9);
+});

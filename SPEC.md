@@ -53,6 +53,8 @@ tower ✓ · evaluator boundary ✓.
   @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs). transformers.js also runs feature-extraction, speech recognition, object
   detection, image classification, depth, segmentation, token and text classification on fp32 graphs. kohra and diskformer load from their main branches;
   `<backend>.source` pins another copy.
+- transformers.js also runs Gemma 4 and Qwen3.5 ONNX as chat with image (and, for Gemma 4, audio) blocks, through
+  their conditional-generation classes at q4f16, as LocalMind does.
 - localmind @main: LocalMind's hand-written engines, matched by architecture and format (lfm2 GGUF, Gemma 4
   QAT-mobile, qwen35 Prism ternary); resident on the GPU, so budget ≥ file size.
 - Agent face: 9 tools (models, probe, plan, load, generate, sessions, unload, stored, remove). Person-only acts: none.

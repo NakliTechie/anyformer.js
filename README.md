@@ -24,7 +24,8 @@ for await (const { text } of chat.generate([{ role: 'user', content: 'What does 
   show(text);
 ```
 
-Every session has `run(input)`: chat messages for text generation, a string or strings for embeddings, ImageData for
+Every session has `run(input)`: chat messages for text generation (content a string, or blocks such as
+`[{ type: 'image', image }, { type: 'text', text }]` for Gemma 4 and Qwen3.5), a string or strings for embeddings, ImageData for
 vision, 16 kHz samples for speech. `load(repo, { task })` picks a task when a repo has more than one. The first load
 downloads the weights into the browser; later loads read them from there. Each back end's runtime loads
 from jsDelivr only when that back end is chosen.
@@ -52,7 +53,7 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 
 | Back end | Runs | Models |
 |---|---|---|
-| `transformers` | transformers.js 4.3.1: text generation, embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
+| `transformers` | transformers.js 4.3.1: text generation, image and audio chat (Gemma 4, Qwen3.5), embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
 | `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion` |
 | `localmind` | LocalMind's hand-written WebGPU kernels, the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
 | `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
@@ -102,6 +103,7 @@ npm run test:browser -- examples/chat/index.html --query "auto=1"   # the workbe
 npm run test:browser -- pipeline --port 8192 --profile ~/.cache/anyformer-chat-profile   # pipeline() on a GGUF
 npm run test:browser -- store             # list a download, remove it
 npm run test:browser -- localmind --query "repo=LiquidAI/LFM2.5-1.2B-Instruct-GGUF"   # a LocalMind engine
+npm run test:browser -- vision --query "repo=onnx-community/Qwen3.5-4B-ONNX-OPT"   # names the two cats
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```
 

@@ -104,6 +104,8 @@ test('dispose waits for the running call, then later calls throw DISPOSED', asyn
 test('bad messages throw INVALID_ARGUMENT; a back-end failure is EXECUTION_FAILED with the cause', async () => {
   const s = await load('a/b', { caps, model, backends: [slowBackend([])] });
   await assert.rejects(drain(s.generate('hi')), (e) => isAnyformerError(e, 'INVALID_ARGUMENT'));
+  await assert.rejects(drain(s.generate([{ role: 'user', content: [{ text: 'no type' }] }])), (e) => isAnyformerError(e, 'INVALID_ARGUMENT'));
+  assert.equal((await drain(s.generate([{ role: 'user', content: [{ type: 'text', text: 'blocks' }] }]))).tokens, 1);
   const broken = { id: 'b', canRun: () => ({ ok: true, estimate: {} }),
     load: async () => ({ async *generate() { throw new Error('device lost'); } }) };
   const t = await load('a/b', { caps, model, backends: [broken] });

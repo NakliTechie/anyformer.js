@@ -48,7 +48,9 @@ export async function load(repoOrEntry, options = {}) {
   return { backend: backend.id, task: session.task || p.task || p.model.task || null, plan: p, ...serialize(session) };
 }
 
-const validMessages = (messages) => Array.isArray(messages) && messages.every((m) => typeof m?.role === 'string' && typeof m?.content === 'string');
+// content: a string, or an array of { type, … } blocks (text, image, audio) for multimodal models.
+const validContent = (c) => typeof c === 'string' || (Array.isArray(c) && c.every((b) => typeof b?.type === 'string'));
+const validMessages = (messages) => Array.isArray(messages) && messages.every((m) => typeof m?.role === 'string' && validContent(m?.content));
 
 // One call at a time per session: two overlapping generates would share one KV cache. A call waits for the previous
 // one to finish (or for its caller to stop iterating). dispose() waits for the running call, then frees the GPU;
@@ -66,7 +68,7 @@ function serialize(session) {
   };
   const generate = session.generate && async function* (messages, o = {}) {
     if (disposed) throw gone();
-    if (!validMessages(messages)) throw new AnyformerError('INVALID_ARGUMENT', 'messages must be an array of { role, content } strings');
+    if (!validMessages(messages)) throw new AnyformerError('INVALID_ARGUMENT', 'messages must be an array of { role, content }, content a string or an array of { type } blocks');
     const release = await turn();
     try {
       if (disposed) throw gone();

@@ -11,6 +11,9 @@ const LFM2_5_1_2B = M('LiquidAI/LFM2.5-1.2B-Instruct-GGUF', 'localmind', 'text-g
 const GEMMA4_E2B = M('google/gemma-4-E2B-it-qat-mobile-transformers', 'localmind', 'text-generation', 'localmind', { downloadBytes: 2.46e9 });
 const GEMMA4_E4B = M('google/gemma-4-E4B-it-qat-mobile-transformers', 'localmind', 'text-generation', 'localmind', { budget: 4e9, downloadBytes: 3.53e9 });
 const TERNARY_BONSAI_2_27B = M('prism-ml/Ternary-Bonsai-2-27B-gguf', 'localmind', 'text-generation', 'localmind', { budget: 7e9, downloadBytes: 5.94e9 });
+const QWEN3_5_4B = M('onnx-community/Qwen3.5-4B-ONNX-OPT', 'transformers', 'text-generation', 'vision', { budget: 3.1e9, downloadBytes: 3.0e9 });
+const GEMMA4_E2B_ONNX = M('onnx-community/gemma-4-E2B-it-ONNX', 'transformers', 'text-generation', 'vision', { budget: 3.5e9, downloadBytes: 3.38e9 });
+const GEMMA4_E4B_ONNX = M('onnx-community/gemma-4-E4B-it-ONNX', 'transformers', 'text-generation', 'transformers', { budget: 5.3e9, downloadBytes: 5.18e9 });
 const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9 });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
 const MINILM_L6 = M('Xenova/all-MiniLM-L6-v2', 'transformers', 'feature-extraction', 'embed', { downloadBytes: 90e6 });
@@ -37,6 +40,8 @@ export const MODELS = {
     /** 26B parameters in 2.5 GB of GPU memory; 14.4 GB on disk (diskformer). */
     GEMMA4_26B_A4B,
   },
+  /** Chat with images in the messages: content [{ type: 'image', image }, { type: 'text', text }]. Gemma 4 takes audio too. */
+  vision: { DEFAULT: QWEN3_5_4B, QWEN3_5_4B, GEMMA4_E2B_ONNX, GEMMA4_E4B_ONNX },
   embedding: { DEFAULT: MINILM_L6, MINILM_L6 },
   objectDetection: { DEFAULT: DETR_RESNET_50, DETR_RESNET_50 },
 };

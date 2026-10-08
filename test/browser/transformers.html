@@ -7,6 +7,7 @@ run('transformers', async () => {
   let last = '';
   // ?repo= runs another model through the same check.
   const s = await load(new URLSearchParams(location.search).get('repo') || 'onnx-community/Qwen2.5-0.5B-Instruct', {
+    budget: Number(new URLSearchParams(location.search).get('budget') || 2.5) * 1e9,
     backends: [transformersBackend],
     onProgress: (p) => { const t = `${p.status} ${p.file || ''} ${p.progress ? p.progress.toFixed(0) + '%' : ''}`; if (t !== last) log(last = t); },
   });

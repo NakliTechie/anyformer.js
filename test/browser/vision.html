@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>vision</title>
+<!-- An image in a chat message: ?repo= a multimodal repo (default Qwen3.5 4B ONNX), ?budget= GB (default 8).
+     Two cats on a sofa (transformers.js's docs image); PASS when the reply names cats. -->
+<script type="module">
+import { load, transformersBackend } from '../../index.js';
+import { run, log, reply } from './harness.js';
+const q = new URLSearchParams(location.search);
+const IMAGE = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/cats.jpg';
+run('vision', async () => {
+  const s = await load(q.get('repo') || 'onnx-community/Qwen3.5-4B-ONNX-OPT', { backends: [transformersBackend], budget: Number(q.get('budget') || 8) * 1e9 });
+  log(`loaded by ${s.backend}`);
+  const bmp = await createImageBitmap(await (await fetch(IMAGE)).blob());
+  const ctx = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d');
+  ctx.drawImage(bmp, 0, 0);
+  const image = ctx.getImageData(0, 0, bmp.width, bmp.height);
+  const r = await reply(s, [{ role: 'user', content: [{ type: 'image', image }, { type: 'text', text: 'What animals are in this picture, and how many?' }] }], 40);
+  await s.dispose();
+  return { ok: /\bcats?\b/i.test(r.text), backend: s.backend, repo: s.plan.model.repo, ...r };
+});
+</script>
