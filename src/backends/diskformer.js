@@ -28,13 +28,13 @@ export const diskformerBackend = {
   source: 'https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@main/engines',
 
   canRun(model, caps, { budget }) {
-    if (!model.formats.includes('gguf')) return { ok: false, reason: 'no GGUF in the repo' };
+    if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
     const m = match(model);
-    if (!m) return { ok: false, reason: `no diskformer engine for this GGUF; engines cover ${DISKFORMER_MODELS.map((x) => x.file).join(', ')}` };
-    if (!caps.webgpu) return { ok: false, reason: 'no WebGPU adapter' };
-    if (!caps.f16) return { ok: false, reason: 'the GPU lacks shader-f16' };
-    if (!caps.opfs) return { ok: false, reason: 'no OPFS (navigator.storage.getDirectory)' };
-    if (budget < m.minBudget) return { ok: false, reason: `a ${(budget / 1e9).toFixed(1)} GB budget is under the ${m.minBudget / 1e9} GB this model has passed its gate at` };
+    if (!m) return { ok: false, code: 'model', reason: `no diskformer engine for this GGUF; engines cover ${DISKFORMER_MODELS.map((x) => x.file).join(', ')}` };
+    if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
+    if (!caps.f16) return { ok: false, code: 'f16', reason: 'the GPU lacks shader-f16' };
+    if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
+    if (budget < m.minBudget) return { ok: false, code: 'budget', need: m.minBudget, reason: `a ${(budget / 1e9).toFixed(1)} GB budget is under the ${m.minBudget / 1e9} GB this model has passed its gate at` };
     // Storage quota is not checked: Chrome raises it as the download writes, while the disk has room.
     return { ok: true, estimate: { gpuBytes: budget, diskBytes: m.size, tokPerSec: speedAt(m, budget) } };
   },

@@ -50,6 +50,17 @@ test('diskformer: refuses small budgets, no f16, no OPFS, ONNX and unknown GGUFs
   assert.match(diskformerBackend.canRun(other, full, B).reason, /no diskformer engine/);
 });
 
+test('every back-end refusal uses a code from REFUSALS', async () => {
+  const { REFUSALS } = await import('../index.js');
+  const cases = [[qwen, noGpu], [gemma, full], [kohra, full], [gemma, noF16], [gemma, { ...full, opfs: false }], [qwen, full]];
+  for (const b of [transformersBackend, kohraBackend, diskformerBackend])
+    for (const [m, c] of cases) {
+      const r = b.canRun(m, c, { budget: 1e9 });
+      if (!r.ok) assert.ok(r.code in REFUSALS, `${b.id} ${m.repo}: ${r.code}`);
+    }
+  assert.equal(diskformerBackend.canRun(gemma, full, { budget: 1e9 }).need, 2.5e9);
+});
+
 test('resolver sends each repo to its back end', async () => {
   const backends = [transformersBackend, kohraBackend, diskformerBackend];
   for (const [model, want] of [[qwen, 'transformers'], [kohra, 'kohra'], [gemma, 'diskformer']]) {

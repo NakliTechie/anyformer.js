@@ -51,7 +51,7 @@ test('load() throws NoBackendError listing every refusal', async () => {
   const err = await load('a/b', { caps, model, backends: [fakeBackend('x', { ok: false, reason: 'needs gguf' })] }).catch((e) => e);
   assert.ok(err instanceof NoBackendError);
   assert.match(err.message, /no back end can run a\/b at a 2\.5 GB budget/);
-  assert.match(err.message, /x: needs gguf/);
+  assert.match(err.message, /x \[model\]: needs gguf/);
   const none = await load('a/b', { caps, model, backends: [] }).catch((e) => e);
   assert.match(none.message, /no back ends registered/);
 });

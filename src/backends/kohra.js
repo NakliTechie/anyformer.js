@@ -23,10 +23,10 @@ export const kohraBackend = {
   source: 'https://cdn.jsdelivr.net/gh/NakliTechie/kohra@main/kohra.js',
 
   canRun(model, caps) {
-    if (!model.tags?.includes('text-diffusion')) return { ok: false, reason: 'not a text-diffusion model' };
-    if (!caps.webgpu) return { ok: false, reason: 'no WebGPU adapter' };
+    if (!model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'not a text-diffusion model' };
+    if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     const graph = pickGraph(model, caps);
-    if (!graph) return { ok: false, reason: `no kohra graph (${FP16} or ${Q4}) in the repo` };
+    if (!graph) return { ok: false, code: 'format', reason: `no kohra graph (${FP16} or ${Q4}) in the repo` };
     const bytes = graphBytes(model, graph);
     return { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } };
   },

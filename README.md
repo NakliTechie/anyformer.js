@@ -1,31 +1,88 @@
-# anyformer.js
+<h1 align="center">anyformer.js</h1>
 
-One call to run any model in a browser tab: it picks the back end that fits the model's format, architecture and your
-GPU budget.
+**One call to run a model in a browser tab: anyformer reads the repo, probes the browser, and picks the back end that
+fits the model's format, architecture and your GPU budget.**
+
+Plain ES modules, no build step, no dependencies to install. Chromium with WebGPU. Weights stay in the user's own
+browser storage; no account, no server, no telemetry.
+
+[![license](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
+[![dependencies](https://img.shields.io/badge/dependencies-none-555?style=flat-square)](package.json)
 
 ## Install
 
-Not usable yet. `anyformer@0.0.1` on npm is a name placeholder with no code.
+| How | Command |
+|---|---|
+| npm | not yet: `anyformer@0.0.1` is a name placeholder with no code |
+| Copy | `index.js` and `src/`; nothing else is needed |
 
-## What it is
+```js
+import { load } from './anyformer/index.js';
 
-A superset runtime for in-browser inference. `load(modelId, { budget })` probes the browser (WebGPU features, GPU
-budget, OPFS quota, memory64), resolves the model to a back end, and exposes one generate / pipeline API:
+const chat = await load('onnx-community/Qwen2.5-0.5B-Instruct', { budget: 2.5e9, onProgress: console.log });
+for await (const { text } of chat.generate([{ role: 'user', content: 'What does a CPU do?' }], { maxNewTokens: 64 }))
+  show(text);
+```
 
-- **transformers.js** — ONNX, breadth across modalities.
-- **diskformer** — models larger than GPU memory: weights in OPFS, only what each step needs on the GPU.
-- **kohra** — text-diffusion LMs (MDLM, BD3LM): a JS denoising loop over onnxruntime-web on WebGPU.
-- **llama.cpp on WebGPU + diskformer** — GGUF across llama.cpp's architectures (after the diskformer spike).
-- **LocalMind's hand engines** — the fastest path on the few models they cover.
+The first load downloads the weights into the browser; later loads read them from there. Each back end's runtime loads
+from jsDelivr only when that back end is chosen.
 
-One model store (diskformer's OPFS layer) serves every back end, so a model downloads once.
+## Why
 
-## Context
+You have a model id and a browser tab. Whether it runs depends on its format (ONNX, GGUF), its architecture, whether it
+is autoregressive or diffusion, and how much GPU memory the tab can take. Each runtime covers part of that, and you
+find out which part by failing to load.
 
-Scaffolded 2026-10-07 from the diskformer.js proposal
-(`diskformer.js/plan/coverage-and-superset-proposal-2026-10.md`, §4). It depends on diskformer; diskformer never depends
-on it. Tier: Product.
+anyformer asks every back end first. `plan(repo)` returns the model's description, the browser's capabilities and each
+back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measured), or no with a code and a reason.
+`load(repo)` runs the best yes.
+
+## Back ends
+
+| Back end | Runs | Models |
+|---|---|---|
+| `transformers` | transformers.js 4.3.1, ONNX text-generation | any onnx-community-style repo with a q4 or fp32 graph |
+| `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion` |
+| `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
+
+kohra and diskformer load from their `main` branches; set `kohraBackend.source` or `diskformerBackend.source` to pin a
+commit. `BACKENDS` lists the back ends `load()` asks by default: each joins after its browser test passes.
+
+## When no back end can run it
+
+`load()` throws `NoBackendError` naming each back end, its code and its reason. Codes are a closed set, each with one
+remedy in `REFUSALS`: `format`, `model`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
+and `threw`.
+
+## Commands
+
+```js
+plan(repo, { budget })            // what would run it, and why the others would not; loads nothing
+load(repo, { budget, onProgress, signal })  // → { backend, plan, generate(messages, opts), dispose() }
+probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
+describe(repo)                    // Hub repo → formats, architecture, task, tags, files
+resolve(model, caps, backends, { budget })  // rank back ends for a described model
+registerTools()                   // publish the agent face (below)
+```
+
+Agents get the same calls as tools (`anyformer_probe`, `_plan`, `_load`, `_generate`, `_sessions`, `_unload`) through
+WebMCP's `navigator.modelContext` where the browser has it and `window.anyformer.tools` otherwise; `anyformer_load`
+loads nothing until the caller accepts the plan's disk bytes.
+
+## Verify it yourself
+
+```bash
+npm test                                   # Node: probe, describe, resolver, back-end verdicts, agent face
+npm run test:browser -- probe              # headless Chrome: WebGPU, f16, OPFS
+npm run test:browser -- transformers       # Qwen2.5-0.5B answers on topic
+npm run test:browser -- kohra              # Qwen3-0.6B MDLM answers on topic
+npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
+```
+
+The browser tests fail a reply that is off topic or repeats itself, and `diskformer-chat` fails any reply that differs
+from llama.cpp's by one character. Only Apple silicon (M4 Pro, Chrome) has run them.
 
 ## License
 
-MIT
+MIT. Spec and agent contract: [SPEC.md](SPEC.md) · depends on [diskformer.js](https://github.com/NakliTechie/diskformer.js)
+and [kohra](https://github.com/NakliTechie/kohra)

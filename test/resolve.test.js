@@ -14,7 +14,7 @@ test('refusals are kept with their reasons and never chosen', async () => {
   const r = await resolve(model, {}, [no('x', 'no gguf'), yes('y')]);
   assert.equal(r.chosen, 'y');
   assert.deepEqual(r.ranked, ['y']);
-  assert.deepEqual(r.candidates[0], { backend: 'x', order: 0, ok: false, reason: 'no gguf' });
+  assert.deepEqual(r.candidates[0], { backend: 'x', order: 0, ok: false, code: 'model', reason: 'no gguf' });
 });
 
 test('a throwing canRun becomes a refusal with the message', async () => {
@@ -38,4 +38,12 @@ test('budget reaches canRun', async () => {
   let seen;
   await resolve(model, {}, [{ id: 'a', canRun: (m, c, o) => { seen = o.budget; return { ok: false, reason: '' }; } }], { budget: 3e9 });
   assert.equal(seen, 3e9);
+});
+
+test('refusal codes come from the closed set; budget refusals carry need', async () => {
+  const { REFUSALS } = await import('../index.js');
+  const tight = { id: 't', canRun: () => ({ ok: false, code: 'budget', need: 4e9, reason: 'small' }) };
+  const r = await resolve(model, {}, [tight, no('x', 'r')]);
+  assert.equal(r.candidates[0].need, 4e9);
+  for (const c of r.candidates) assert.ok(c.code in REFUSALS, c.code);
 });

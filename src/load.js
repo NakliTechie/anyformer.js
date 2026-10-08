@@ -13,7 +13,7 @@ export const DEFAULT_BUDGET = 2.5e9;
 
 export class NoBackendError extends Error {
   constructor(plan) {
-    const lines = plan.candidates.map((c) => `  ${c.backend}: ${c.reason}`);
+    const lines = plan.candidates.map((c) => `  ${c.backend} [${c.code}]: ${c.reason}`);
     super(`no back end can run ${plan.model.repo} at a ${(plan.budget / 1e9).toFixed(1)} GB budget` +
       (lines.length ? `:\n${lines.join('\n')}` : ': no back ends registered'));
     this.name = 'NoBackendError';

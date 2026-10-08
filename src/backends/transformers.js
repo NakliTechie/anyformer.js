@@ -25,13 +25,13 @@ export const transformersBackend = {
   id: 'transformers',
 
   canRun(model, caps) {
-    if (!model.formats.includes('onnx')) return { ok: false, reason: 'no ONNX graph in the repo' };
+    if (!model.formats.includes('onnx')) return { ok: false, code: 'format', reason: 'no ONNX graph in the repo' };
     // kohra's diffusion graphs are ONNX too, but transformers.js generate() is autoregressive only.
-    if (model.tags?.includes('text-diffusion')) return { ok: false, reason: 'a text-diffusion model; transformers.js generate() is autoregressive only' };
-    if (model.task !== 'text-generation') return { ok: false, reason: `task ${model.task || 'unknown'}; this back end runs text-generation only` };
-    if (!caps.webgpu) return { ok: false, reason: 'no WebGPU adapter' };
+    if (model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'a text-diffusion model; transformers.js generate() is autoregressive only' };
+    if (model.task !== 'text-generation') return { ok: false, code: 'model', reason: `task ${model.task || 'unknown'}; this back end runs text-generation only` };
+    if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     const dtype = pickDtype(model, caps);
-    if (!dtype) return { ok: false, reason: `no ONNX graph at ${Object.values(FILES).join(', ')}` };
+    if (!dtype) return { ok: false, code: 'format', reason: `no ONNX graph at ${Object.values(FILES).join(', ')}` };
     const bytes = graphBytes(model, FILES[dtype]);
     return { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } };
   },
