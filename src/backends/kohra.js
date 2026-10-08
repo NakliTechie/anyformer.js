@@ -1,9 +1,9 @@
 // kohra: text-diffusion LMs (MDLM, BD3LM). kohra.js runs the denoising loop over onnxruntime-web; it loads from the
-// CDN at load() time, pinned to a kohra commit.
+// CDN at load() time from kohra's main branch, which moves with kohra's own work; set kohraBackend.source to pin a
+// commit or point at a local copy.
 
 import { graphBytes } from './transformers.js';
 
-const KOHRA = 'https://cdn.jsdelivr.net/gh/NakliTechie/kohra@9d99214/kohra.js';
 const FP16 = 'onnx/model_fp16_fused.onnx';
 // The q4 graph decodes on WebGPU only with RTN packing and this ORT-web dev build (kohra README, "Known constraints").
 const Q4 = 'onnx/model_q4f16_rtn_sym.onnx';
@@ -20,6 +20,7 @@ const chatml = (messages) =>
 
 export const kohraBackend = {
   id: 'kohra',
+  source: 'https://cdn.jsdelivr.net/gh/NakliTechie/kohra@main/kohra.js',
 
   canRun(model, caps) {
     if (!model.tags?.includes('text-diffusion')) return { ok: false, reason: 'not a text-diffusion model' };
@@ -32,7 +33,7 @@ export const kohraBackend = {
 
   async load(model, { caps, onProgress, signal }) {
     const graph = pickGraph(model, caps);
-    const { DiffusionLM } = await import(KOHRA);
+    const { DiffusionLM } = await import(kohraBackend.source);
     onProgress?.({ backend: 'kohra', status: 'loading', file: graph });
     const base = `https://huggingface.co/${model.repo}/resolve/${model.revision || 'main'}`;
     const lm = await DiffusionLM.from_pretrained({

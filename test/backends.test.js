@@ -13,11 +13,11 @@ const noF16 = { ...full, f16: false };
 const noGpu = { ...full, webgpu: false };
 const B = { budget: 2.5e9 };
 
-test('transformers: Qwen2.5 ONNX accepted, q4f16 graph with f16, q4 without', () => {
+test('transformers: Qwen2.5 ONNX accepted with the q4 graph (f32 activations), with or without f16', () => {
   const r = transformersBackend.canRun(qwen, full, B);
   assert.equal(r.ok, true);
-  assert.equal(r.estimate.gpuBytes, 483003582);                 // onnx/model_q4f16.onnx
-  assert.equal(transformersBackend.canRun(qwen, noF16, B).estimate.gpuBytes, 786156820); // onnx/model_q4.onnx
+  assert.equal(r.estimate.gpuBytes, 786156820);                 // onnx/model_q4.onnx
+  assert.equal(transformersBackend.canRun(qwen, noF16, B).estimate.gpuBytes, 786156820);
 });
 
 test('transformers: refuses GGUF, text-diffusion and no WebGPU', () => {

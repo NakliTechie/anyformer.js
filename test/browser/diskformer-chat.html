@@ -1,0 +1,34 @@
+<!doctype html><meta charset="utf-8"><title>diskformer-chat</title>
+<!-- diskformer's chat gate, through anyformer: replay llama.cpp b9830's replies (test/fixtures/diskformer-gemma-chat-refs.json,
+     copied from diskformer.js examples/chat/refs/gemma.json) and require each reply to match character for character. -->
+<script type="module">
+import { load, diskformerBackend } from '../../index.js';
+import { run, log, reply } from './harness.js';
+const budget = Number(new URLSearchParams(location.search).get('budget') || 2.5) * 1e9;
+run('diskformer-chat', async () => {
+  const ref = await (await fetch('../fixtures/diskformer-gemma-chat-refs.json')).json();
+  let lastAt = 0;
+  const s = await load('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', {
+    budget, backends: [diskformerBackend],
+    onProgress: (e) => {
+      if (Date.now() - lastAt < 5000 && e.status !== 'ready') return;
+      lastAt = Date.now();
+      log(`${e.status}${e.kind ? ' ' + e.kind : ''}${e.total ? ` ${e.loaded} of ${e.total}` : ''}`);
+    },
+  });
+  const PREFIX = '<|channel>thought\n<channel|>';
+  const rows = [];
+  for (const c of ref.conversations) {
+    log(`gate: ${c.name} (${rows.length + 1} of ${ref.conversations.length})`);
+    const r = await reply(s, c.messages, c.tokens || 64);
+    if (c.content === undefined) { rows.push({ name: c.name, text: r.text, tokens: r.tokens, tokPerSec: r.tokPerSec }); continue; }
+    const theirs = c.content.startsWith(PREFIX) ? c.content.slice(PREFIX.length) : c.content;
+    rows.push({ name: c.name, identical: r.text === theirs, tokens: r.tokens, tokPerSec: r.tokPerSec, ...(r.text === theirs ? {} : { ours: r.text, theirs }) });
+  }
+  const compared = rows.filter((r) => 'identical' in r), identical = compared.filter((r) => r.identical).length;
+  const speeds = rows.map((r) => r.tokPerSec).filter(Boolean).sort((a, b) => a - b);
+  await s.dispose();
+  return { ok: identical === compared.length && rows.every((r) => r.tokens > 0), identical, compared: compared.length, of: rows.length,
+    budget, medianTokPerSec: speeds[speeds.length >> 1], rows };
+});
+</script>

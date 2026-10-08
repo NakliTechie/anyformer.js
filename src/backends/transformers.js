@@ -7,9 +7,12 @@ const CDN = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${VERSION}/+
 // dtype → the ONNX file transformers.js reads for it (decoder-only repos keep one graph per dtype under onnx/).
 const FILES = { q4f16: 'onnx/model_q4f16.onnx', q4: 'onnx/model_q4.onnx', fp16: 'onnx/model_fp16.onnx', fp32: 'onnx/model.onnx' };
 
+// f16 activations come last: on Apple Metal (Chrome 154, transformers.js 4.3.1) Qwen2.5-0.5B's q4f16 graph decodes
+// to word salad and fp16 loops, while q4 (f32 activations) answers correctly (test/browser/transformers.html,
+// 2026-10-08). kohra hit the same fp16 overflow on WebGPU (kohra README, "Known constraints").
 function pickDtype(model, caps) {
   const have = new Set(model.files.onnx.map((f) => f.name));
-  const order = caps.f16 ? ['q4f16', 'fp16', 'q4', 'fp32'] : ['q4', 'fp32'];
+  const order = caps.f16 ? ['q4', 'fp32', 'q4f16', 'fp16'] : ['q4', 'fp32'];
   return order.find((d) => have.has(FILES[d])) || null;
 }
 

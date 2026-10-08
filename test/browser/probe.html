@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>probe</title>
+<script type="module">
+import { probe } from '../../index.js';
+import { run } from './harness.js';
+run('probe', async () => { const caps = await probe(); return { ok: caps.webgpu && caps.f16 && caps.opfs, caps }; });
+</script>

@@ -1,7 +1,6 @@
 // diskformer: MoE models larger than GPU memory. Weights stay in OPFS; the GPU holds the dense layers, the KV cache
-// and an expert cache sized by the budget. Engines load from the CDN at load() time, pinned to a diskformer release.
-
-const CDN = 'https://cdn.jsdelivr.net/npm/diskformer@0.3.0/engines';
+// and an expert cache sized by the budget. Engines load from the CDN at load() time from diskformer's main branch,
+// which moves with diskformer's own work; set diskformerBackend.source to pin a release or point at a local copy.
 
 // The GGUFs diskformer's engines are pinned to (GEMMA4_26B_A4B, QWEN36_35B_A3B in engines/*.js), with the smallest budget each
 // has passed its gate at and the measured decode speeds (diskformer README, M4 Pro, 2026-10-05).
@@ -26,6 +25,7 @@ const speedAt = (m, budget) => m.speeds.filter(([b]) => b <= budget).at(-1)?.[1]
 
 export const diskformerBackend = {
   id: 'diskformer',
+  source: 'https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@main/engines',
 
   canRun(model, caps, { budget }) {
     if (!model.formats.includes('gguf')) return { ok: false, reason: 'no GGUF in the repo' };
@@ -41,7 +41,7 @@ export const diskformerBackend = {
 
   async load(model, { budget, onProgress, signal }) {
     const m = match(model);
-    const mod = await import(`${CDN}/${m.engine}`);
+    const mod = await import(`${diskformerBackend.source}/${m.engine}`);
     const engine = await mod[m.Engine].load(null, {
       gpuBudgetBytes: budget, signal,
       onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),

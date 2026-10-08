@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>transformers</title>
+<script type="module">
+import { load, transformersBackend } from '../../index.js';
+import { run, log, reply, onTopic } from './harness.js';
+run('transformers', async () => {
+  const t0 = performance.now();
+  let last = '';
+  const s = await load('onnx-community/Qwen2.5-0.5B-Instruct', {
+    backends: [transformersBackend],
+    onProgress: (p) => { const t = `${p.status} ${p.file || ''} ${p.progress ? p.progress.toFixed(0) + '%' : ''}`; if (t !== last) log(last = t); },
+  });
+  const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
+  log(`loaded by ${s.backend} in ${loadSeconds} s`);
+  const r = await reply(s, [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }], 32);
+  s.dispose();
+  return { ok: onTopic(r.text), backend: s.backend, loadSeconds, ...r };
+});
+</script>

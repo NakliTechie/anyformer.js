@@ -1,9 +1,11 @@
 import { probe } from './probe.js';
 import { describe } from './describe.js';
 import { resolve } from './resolve.js';
+import { transformersBackend } from './backends/transformers.js';
+import { kohraBackend } from './backends/kohra.js';
 
-// Back ends land here as each one passes its test (Batch A: transformers.js, diskformer).
-export const BACKENDS = [];
+// Back ends land here as each one passes its browser test (test/browser/). The list order breaks ties.
+export const BACKENDS = [transformersBackend, kohraBackend];
 
 // 2.5 GB: the smallest budget diskformer's chat gate passes at. Browsers do not report GPU memory, so a caller that
 // knows more passes { budget }.
