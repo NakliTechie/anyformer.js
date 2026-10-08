@@ -23,4 +23,5 @@ npm run test:browser -- probe
 ```
 
 kohra and diskformer load at their current `main` commit. `diskformer-chat` uses port 8192 and the profile
-`~/.cache/anyformer-chat-profile`, so the 14.4 GB download happens once; `--budget 4.3` changes the budget.
+`~/.cache/anyformer-chat-profile`, so the 14.4 GB download happens once; `--budget 4.3` changes the budget. Other
+pages get a throwaway profile, deleted when the run ends, unless `--profile` names one to keep.

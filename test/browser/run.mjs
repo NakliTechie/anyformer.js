@@ -7,6 +7,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, stat, mkdtemp } from 'node:fs/promises';
+import { rmSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, extname, normalize, sep } from 'node:path';
@@ -36,10 +37,18 @@ const [kohra, diskformer, localmind] = await Promise.all([head('kohra'), head('d
 const q = new URLSearchParams({ kohra, diskformer, localmind, ...(arg('budget') && { budget: arg('budget') }), ...Object.fromEntries(new URLSearchParams(arg('query', ''))) });
 console.error(`kohra main ${kohra.slice(0, 7)}, diskformer main ${diskformer.slice(0, 7)}, LocalMind main ${localmind.slice(0, 7)}`);
 
+// A throwaway profile (no --profile, not diskformer-chat) is deleted on exit: its downloads are never reused.
+const temporary = !arg('profile') && !chat;
 const profile = arg('profile') || (chat ? join(homedir(), '.cache/anyformer-chat-profile') : await mkdtemp(join(tmpdir(), 'anyformer-test-')));
 const chrome = spawn(process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   ['--headless=new', '--no-first-run', `--user-data-dir=${profile}`, '--enable-unsafe-webgpu', `--remote-debugging-port=${cdp}`, 'about:blank'], { stdio: 'ignore' });
-const stop = (code) => { try { chrome.kill(); } catch {} server.close(); process.exit(code); };
+const stop = (code) => {
+  try { chrome.kill(); } catch {}
+  server.close();
+  // Chrome holds files in the profile until it exits; wait for that before deleting it.
+  const done = () => { if (temporary) rmSync(profile, { recursive: true, force: true }); process.exit(code); };
+  if (chrome.exitCode !== null) done(); else { chrome.once('exit', done); setTimeout(done, 5000); }
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let ws;
 for (let k = 0; k < 100 && !ws; k++) { try { const t = (await (await fetch(`http://127.0.0.1:${cdp}/json`)).json()).find((x) => x.type === 'page'); ws = new WebSocket(t.webSocketDebuggerUrl); } catch { await sleep(200); } }
