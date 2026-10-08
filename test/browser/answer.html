@@ -1,13 +1,16 @@
 <!doctype html><meta charset="utf-8"><title>answer</title>
 <!-- One greedy reply through anyformer, for bench/parity.mjs and bench/speed.mjs: ?repo= ?budget=GB ?n=tokens ?prompt=
+     ?backend=<id> limits the plan to one back end (registered or not), e.g. wllama
      ?dtype= (a precision the back end offers) ?rp= (repetition penalty) ?ctx= (maxCtx, tokens)
      ?runs=N repeats the same request N times (run 1 is the warm-up when timing). -->
 <script type="module">
-import { load } from '../../index.js';
+import * as af from '../../index.js';
+const { load } = af;
 import { run, log } from './harness.js';
 const q = new URLSearchParams(location.search);
 run('answer', async () => {
-  const s = await load(q.get('repo'), { budget: Number(q.get('budget') || 2.5) * 1e9, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(q.get('ctx') && { maxCtx: Number(q.get('ctx')) }) });
+  const only = q.get('backend') && Object.values(af).find((b) => b?.id === q.get('backend') && b.canRun);
+  const s = await load(q.get('repo'), { ...(only && { backends: [only] }), budget: Number(q.get('budget') || 2.5) * 1e9, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(q.get('ctx') && { maxCtx: Number(q.get('ctx')) }) });
   log(`loaded by ${s.backend}`);
   const runs = [];
   for (let i = 0; i < Number(q.get('runs') || 1); i++) {

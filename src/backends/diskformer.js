@@ -1,8 +1,9 @@
 // diskformer: MoE models larger than GPU memory. Weights stay in OPFS; the GPU holds the dense layers, the KV cache
-// and an expert cache sized by the budget. Engines load from the CDN at load() time from diskformer's main branch,
-// which moves with diskformer's own work; set diskformerBackend.source to pin a release or point at a local copy.
+// and an expert cache sized by the budget. Engines load from the CDN at load() time, at the commit src/sources.js pins;
+// set diskformerBackend.source to load another copy.
 
 import { AnyformerError } from '../errors.js';
+import { SOURCES } from '../sources.js';
 
 // The GGUFs diskformer's engines are pinned to (GEMMA4_26B_A4B, QWEN36_35B_A3B in engines/*.js), with the smallest budget each
 // has passed its gate at and the measured decode speeds (diskformer README, M4 Pro, 2026-10-05).
@@ -38,7 +39,7 @@ export const diskformerBackend = {
   id: 'diskformer',
   // Gemma 4's repo is tagged image-text-to-text; the engines run its text turns.
   tasks: ['text-generation', 'image-text-to-text'],
-  source: 'https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@main/engines',
+  source: SOURCES.diskformer,
 
   canRun(model, caps, { budget, task }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };

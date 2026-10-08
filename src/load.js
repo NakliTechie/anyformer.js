@@ -5,10 +5,11 @@ import { transformersBackend } from './backends/transformers.js';
 import { kohraBackend } from './backends/kohra.js';
 import { diskformerBackend } from './backends/diskformer.js';
 import { localmindBackend } from './backends/localmind.js';
+import { wllamaBackend } from './backends/wllama.js';
 import { AnyformerError, wrap } from './errors.js';
 
 // Back ends land here as each one passes its browser test (test/browser/). The list order breaks ties.
-export const BACKENDS = [transformersBackend, kohraBackend, diskformerBackend, localmindBackend];
+export const BACKENDS = [transformersBackend, kohraBackend, diskformerBackend, localmindBackend, wllamaBackend];
 
 // 2.5 GB: the smallest budget diskformer's chat gate passes at. Browsers do not report GPU memory, so a caller that
 // knows more passes { budget }.
@@ -45,7 +46,7 @@ export async function load(repoOrEntry, options = {}) {
   try {
     session = await backend.load(p.model, { budget: p.budget, task: p.task, caps: p.caps, maxCtx, dtype, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
-  return { backend: backend.id, task: session.task || p.task || p.model.task || null, plan: p, ...serialize(session) };
+  return { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p, ...serialize(session) };
 }
 
 // content: a string, or an array of { type, … } blocks (text, image, audio) for multimodal models.

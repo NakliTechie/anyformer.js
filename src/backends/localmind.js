@@ -1,13 +1,15 @@
 // LocalMind's hand-written WebGPU engines: whole model resident on the GPU, kernels written per architecture. Each
 // engine reads its config from the model file, so it runs any checkpoint of its architecture in a format it reads,
-// not only the one LocalMind ships. They load from LocalMind's main branch on the CDN at load() time; set
-// localmindBackend.source to pin a commit or point at a local copy.
+// not only the one LocalMind ships. They load from the CDN at load() time, at the commit src/sources.js pins; set
+// localmindBackend.source to load another copy.
 //
 //   lfm2     src/lfm2_5.js           GGUF, general.architecture 'lfm2' (dense LFM2 / LFM2.5), Q4_0 Q8_0 Q4_K Q5_K Q6_K
 //   gemma4   src/gemma-4-e2b.js      Google's QAT-mobile safetensors export of Gemma 4 (E2B, E4B): config.json-driven
 //   qwen35   src/ternary_bonsai_2_27b.js  GGUF, 'qwen35' with Prism's ternary types (PTQ1_0, PQ2_0) only: a standard
 //            K-quant (unsloth/Qwen3.5-4B-GGUF Q4_K_M) fails with "This feature is not included in this bundle".
 // Speeds: LocalMind's quiet-machine engine bench (plan/bench-engines-quiet-2026-09-24.md, M4 Pro, 256 tokens, greedy).
+
+import { SOURCES } from '../sources.js';
 
 const ENGINES = {
   lfm2: { file: 'lfm2_5.js', Engine: 'Lfm2Mobile' },
@@ -56,7 +58,7 @@ function match(model) {
 export const localmindBackend = {
   id: 'localmind',
   tasks: ['text-generation'],
-  source: 'https://cdn.jsdelivr.net/gh/NakliTechie/LocalMind@main/src',
+  source: SOURCES.localmind,
 
   canRun(model, caps, { budget, task }) {
     const m = match(model);

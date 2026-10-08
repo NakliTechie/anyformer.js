@@ -14,7 +14,7 @@ and exits 0 on pass, 1 on fail, 2 on timeout.
 | `store` | MiniLM appears in `stored()` after a load; the agent tool stages; `remove()` frees the same bytes |
 | `stored` | lists the store, changes nothing (run with the chat profile to see Gemma) |
 | `examples/chat/index.html --query "auto=1"` | the workbench loads the default chat model and answers; `model=GEMMA4_26B_A4B` with the chat port and profile runs Gemma |
-| `localmind` | a LocalMind engine (`?repo=`, `?budget=`) answers on topic |
+| `chat` | one chat reply through anyformer answers on topic (`?repo=`, `?budget=`, `?backend=`) |
 | `vision` | an image in a chat message: Qwen3.5 4B or Gemma 4 ONNX names the cats in `cats.jpg` |
 | `diskformer-chat` | Gemma 4 26B-A4B at a 2.5 GB budget: 9/9 replies identical to llama.cpp b9830 (diskformer's chat gate) |
 
@@ -22,6 +22,7 @@ and exits 0 on pass, 1 on fail, 2 on timeout.
 npm run test:browser -- probe
 ```
 
-kohra and diskformer load at their current `main` commit. `diskformer-chat` uses port 8192 and the profile
+kohra, diskformer and LocalMind load at the commits `src/sources.js` pins; `--main` tests their current `main` instead.
+To move the pins: `node scripts/pin-sources.mjs`, then this suite, then commit. `diskformer-chat` uses port 8192 and the profile
 `~/.cache/anyformer-chat-profile`, so the 14.4 GB download happens once; `--budget 4.3` changes the budget. Other
 pages get a throwaway profile, deleted when the run ends, unless `--profile` names one to keep.

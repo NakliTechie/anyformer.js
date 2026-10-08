@@ -2,6 +2,8 @@
 // importing anyformer costs nothing until this back end is chosen.
 
 
+import { SOURCES } from '../sources.js';
+
 // dtype → the ONNX file transformers.js reads for it (decoder-only repos keep one graph per dtype under onnx/).
 const FILES = {
   q4: 'onnx/model_q4.onnx', q2: 'onnx/model_q2.onnx', fp32: 'onnx/model.onnx',
@@ -58,8 +60,8 @@ const fp32Bytes = (model) => model.files.onnx.filter((f) => FP32.test(f.name)).r
 
 export const transformersBackend = {
   id: 'transformers',
-  // The library, pinned. Set transformersBackend.source to load another version.
-  source: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm',
+  // The library, at the version src/sources.js pins. Set transformersBackend.source to load another version.
+  source: SOURCES.transformers,
   tasks: ['text-generation', ...Object.keys(PIPELINES)],
 
   canRun(model, caps, { task, budget = Infinity } = {}) {

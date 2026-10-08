@@ -1,8 +1,39 @@
 {
   "name": "anyformer",
   "version": "0.0.1",
-  "description": "One call to run any model in a browser tab: picks the back end that fits the model's format, architecture and your GPU budget. Pre-release name placeholder; no code yet.",
+  "description": "One call to run a model in a browser tab: anyformer reads the Hub repo, probes the browser, and picks the back end (transformers.js, LocalMind's WebGPU kernels, diskformer, kohra) that fits the model's format, architecture and your GPU budget.",
   "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "README.md",
+    "LICENSE",
+    "SPEC.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test 'test/*.test.js'",
+    "test:browser": "node test/browser/run.mjs",
+    "pin": "node scripts/pin-sources.mjs"
+  },
+  "keywords": [
+    "agent",
+    "browser",
+    "diffusion",
+    "diskformer",
+    "gguf",
+    "inference",
+    "llm",
+    "localmind",
+    "onnx",
+    "transformers",
+    "webgpu",
+    "webmcp"
+  ],
   "license": "MIT",
   "author": "Chirag Patnaik",
   "homepage": "https://github.com/NakliTechie/anyformer.js#readme",
@@ -12,24 +43,5 @@
   },
   "bugs": {
     "url": "https://github.com/NakliTechie/anyformer.js/issues"
-  },
-  "keywords": [
-    "webgpu",
-    "llm",
-    "inference",
-    "browser",
-    "transformers",
-    "gguf",
-    "onnx",
-    "diffusion",
-    "diskformer"
-  ],
-  "files": [
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "test": "node --test 'test/*.test.js'",
-    "test:browser": "node test/browser/run.mjs"
   }
 }

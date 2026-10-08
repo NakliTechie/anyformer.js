@@ -1,8 +1,8 @@
 // kohra: text-diffusion LMs (MDLM, BD3LM). kohra.js runs the denoising loop over onnxruntime-web; it loads from the
-// CDN at load() time from kohra's main branch, which moves with kohra's own work; set kohraBackend.source to pin a
-// commit or point at a local copy.
+// CDN at load() time, at the commit src/sources.js pins; set kohraBackend.source to load another copy.
 
 import { graphBytes } from './transformers.js';
+import { SOURCES } from '../sources.js';
 
 const FP16 = 'onnx/model_fp16_fused.onnx';
 // The q4 graph decodes on WebGPU only with RTN packing and this ORT-web dev build (kohra README, "Known constraints").
@@ -21,7 +21,7 @@ const chatml = (messages) =>
 export const kohraBackend = {
   id: 'kohra',
   tasks: ['text-generation'],
-  source: 'https://cdn.jsdelivr.net/gh/NakliTechie/kohra@main/kohra.js',
+  source: SOURCES.kohra,
 
   canRun(model, caps, { task } = {}) {
     if (!model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'not a text-diffusion model' };

@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>chat</title>
+<!-- One chat reply through anyformer, checked on topic: ?repo=<Hub id> (default LFM2.5 230M GGUF), ?budget=<GB>,
+     ?backend=<id> to use one back end, registered or not (default: the resolver's choice among BACKENDS). -->
+<script type="module">
+import * as af from '../../index.js';
+import { run, log, reply, onTopic } from './harness.js';
+const q = new URLSearchParams(location.search);
+const only = q.get('backend') && Object.values(af).find((b) => b?.id === q.get('backend') && b.canRun);
+run('chat', async () => {
+  const t0 = performance.now();
+  let last = '';
+  const s = await af.load(q.get('repo') || 'LiquidAI/LFM2.5-230M-GGUF', {
+    ...(only && { backends: [only] }), budget: Number(q.get('budget') || 2.5) * 1e9,
+    onProgress: (p) => { const t = `${p.backend} ${p.engine || ''} ${p.status || p.phase || ''} ${p.file || ''} ${p.loaded ?? ''}/${p.total ?? ''}`; if (t !== last && Date.now() % 3 === 0) log(last = t); },
+  });
+  const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
+  log(`loaded by ${s.backend} in ${loadSeconds} s`);
+  const r = await reply(s, [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }], 64);
+  await s.dispose();
+  return { ok: onTopic(r.text), backend: s.backend, repo: s.plan.model.repo, ...(s.device && { device: s.device }), loadSeconds, ...r };
+});
+</script>

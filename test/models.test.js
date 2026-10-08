@@ -27,6 +27,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'onnx-community/Qwen3.5-4B-ONNX-OPT': 'onnx-community_Qwen3.5-4B-ONNX-OPT',
     'onnx-community/gemma-4-E2B-it-ONNX': 'onnx-community_gemma-4-E2B-it-ONNX',
     'onnx-community/gemma-4-E4B-it-ONNX': 'onnx-community_gemma-4-E4B-it-ONNX',
+    'openbmb/MiniCPM5-2B-GGUF': 'openbmb_MiniCPM5-2B-GGUF',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
