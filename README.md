@@ -58,7 +58,7 @@ and `threw`.
 
 ```js
 plan(repo, { budget })            // what would run it, and why the others would not; loads nothing
-load(repo, { budget, onProgress, signal })  // → { backend, plan, generate(messages, opts), dispose() }
+load(repo, { budget, maxCtx, onProgress, signal })  // → { backend, plan, generate(messages, opts), dispose() }
 probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
 describe(repo)                    // Hub repo → formats, architecture, task, tags, files
 resolve(model, caps, backends, { budget })  // rank back ends for a described model

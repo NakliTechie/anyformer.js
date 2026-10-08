@@ -6,7 +6,8 @@
 //             estimate = { gpuBytes, diskBytes, tokPerSec | null }. No network, no GPU allocation: it reads the
 //             descriptor and caps only. code is one of REFUSALS below; need is the budget that would pass, with
 //             code 'budget'. A throw counts as code 'threw' with the message as the reason.
-//   load(model, { budget, caps, onProgress, signal }) → session
+//   load(model, { budget, caps, maxCtx, onProgress, signal }) → session   (maxCtx: tokens; undefined = the back
+//             end's default)
 //             session = { generate(messages, opts) → async iterable of { text, tokens }, dispose() }
 //             The back end applies the model's own chat template.
 

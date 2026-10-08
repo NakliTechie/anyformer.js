@@ -36,10 +36,11 @@ test('plan() calls describe() with the injected fetch when no model is given', a
 test('load() loads the chosen back end and streams its output', async () => {
   const b = fakeBackend('t');
   const onProgress = () => {};
-  const s = await load('a/b', { caps, model, backends: [fakeBackend('x', { ok: false }), b], budget: 3e9, onProgress });
+  const s = await load('a/b', { caps, model, backends: [fakeBackend('x', { ok: false }), b], budget: 3e9, maxCtx: 2048, onProgress });
   assert.equal(s.backend, 't');
   assert.equal(b.calls[0].o.budget, 3e9);
   assert.equal(b.calls[0].o.onProgress, onProgress);
+  assert.equal(b.calls[0].o.maxCtx, 2048);
   const out = [];
   for await (const c of s.generate([{ role: 'user', content: 'x' }])) out.push(c.text);
   assert.deepEqual(out, ['hi', 'hi 1']);

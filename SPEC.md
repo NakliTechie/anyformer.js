@@ -43,7 +43,7 @@ tower ✓ · evaluator boundary ✓.
 
 ## What shipped (Batch A)
 
-- `load(repo, {budget, backends, onProgress, signal})` → `{backend, plan, generate(messages, {maxNewTokens, signal}),
+- `load(repo, {budget, maxCtx, backends, onProgress, signal})` → `{backend, plan, generate(messages, {maxNewTokens, signal}),
   dispose()}`; `generate` yields `{text, tokens}`, `text` cumulative.
 - Back ends: transformers.js 4.3.1 (ONNX text-generation, q4 first), kohra @main (text-diffusion ONNX), diskformer
   @main (pinned Gemma 4 26B-A4B and Qwen3.6 35B-A3B GGUFs). kohra and diskformer load from their main branches;

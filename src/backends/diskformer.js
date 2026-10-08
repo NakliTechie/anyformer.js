@@ -39,11 +39,13 @@ export const diskformerBackend = {
     return { ok: true, estimate: { gpuBytes: budget, diskBytes: m.size, tokPerSec: speedAt(m, budget) } };
   },
 
-  async load(model, { budget, onProgress, signal }) {
+  // maxCtx sizes the KV cache, which stays on the GPU: the 2.5 GB minimum and the speeds above hold at 1024 tokens,
+  // the context diskformer's chat gate runs at. A longer context needs a larger budget.
+  async load(model, { budget, maxCtx = 1024, onProgress, signal }) {
     const m = match(model);
     const mod = await import(`${diskformerBackend.source}/${m.engine}`);
     const engine = await mod[m.Engine].load(null, {
-      gpuBudgetBytes: budget, signal,
+      gpuBudgetBytes: budget, maxCtx, signal,
       onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
     });
     return {
