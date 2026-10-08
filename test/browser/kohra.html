@@ -5,7 +5,8 @@ import { run, log, reply, onTopic } from './harness.js';
 run('kohra', async () => {
   const t0 = performance.now();
   let last = '';
-  const s = await load('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', {
+  // ?repo= runs another model through the same check.
+  const s = await load(new URLSearchParams(location.search).get('repo') || 'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', {
     backends: [kohraBackend],
     onProgress: (p) => { const t = `${p.status} ${p.file || ''} ${p.progress ? p.progress.toFixed(0) + '%' : ''}`; if (t !== last) log(last = t); },
   });

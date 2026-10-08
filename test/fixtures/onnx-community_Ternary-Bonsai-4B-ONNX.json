@@ -1,0 +1,71 @@
+{
+ "id": "onnx-community/Ternary-Bonsai-4B-ONNX",
+ "sha": "9d085aaf786063cadb648fff1725c2c36fd28ade",
+ "tags": [
+  "onnx",
+  "qwen3",
+  "region:us"
+ ],
+ "siblings": [
+  {
+   "rfilename": "config.json",
+   "blobId": "2cf806dbcebad704286d1237f6fa2958fc6e7138",
+   "size": 2348
+  },
+  {
+   "rfilename": "generation_config.json",
+   "blobId": "e1c124073fed6d78e58801bdbe679f5fa60ceb22",
+   "size": 290
+  },
+  {
+   "rfilename": "onnx/model_q2.onnx",
+   "blobId": "992e01ec1831b637592ac1055966657adbfa79ab",
+   "size": 475183,
+   "lfs": {
+    "sha256": "eaca74cb7b9e2f697fb4e13f7872af648dea2edb743af34a36deb26852c2ebd8",
+    "size": 475183,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "onnx/model_q2.onnx_data",
+   "blobId": "d82e08e54fd36bfdcddd572f43af498dfcd1434d",
+   "size": 1157967851,
+   "lfs": {
+    "sha256": "8d7acae71cc34257b36e6a01fa94ae544a6ab5d08493ead31bce91958633aa8b",
+    "size": 1157967851,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "onnx/model_q2f16.onnx",
+   "blobId": "332cbaf706139c388da4776100a11085a94343bb",
+   "size": 459167,
+   "lfs": {
+    "sha256": "93d65c462f90d55134d1e1bb68f6cd31577ed32022e05736c78367d3f8beda60",
+    "size": 459167,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "onnx/model_q2f16.onnx_data",
+   "blobId": "42e159407e95a7d415804196aab5ad93a73851c6",
+   "size": 1086368163,
+   "lfs": {
+    "sha256": "6b819474417043f54f75563406ff43f27eeae15506cc665596676bd0f958ad97",
+    "size": 1086368163,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "tokenizer.json",
+   "blobId": "1463e2eafe9285b80c6a5afb663c5cb58b525ed5",
+   "size": 9117036
+  },
+  {
+   "rfilename": "tokenizer_config.json",
+   "blobId": "f52ba6f957521244c68b940bd39264e659005207",
+   "size": 4598
+  }
+ ]
+}

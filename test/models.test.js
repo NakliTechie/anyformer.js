@@ -18,6 +18,7 @@ test('every MODELS entry names a registered back end and an existing browser tes
 test('an entry resolves to its own back end from its Hub fixture, with its task and budget', async () => {
   const fixtures = {
     'onnx-community/Qwen2.5-0.5B-Instruct': 'onnx-community_Qwen2.5-0.5B-Instruct',
+    'onnx-community/Ternary-Bonsai-4B-ONNX': 'onnx-community_Ternary-Bonsai-4B-ONNX',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',

@@ -5,14 +5,17 @@ const VERSION = '4.3.1';
 const CDN = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${VERSION}/+esm`;
 
 // dtype → the ONNX file transformers.js reads for it (decoder-only repos keep one graph per dtype under onnx/).
-const FILES = { q4f16: 'onnx/model_q4f16.onnx', q4: 'onnx/model_q4.onnx', fp16: 'onnx/model_fp16.onnx', fp32: 'onnx/model.onnx' };
+const FILES = {
+  q4: 'onnx/model_q4.onnx', q2: 'onnx/model_q2.onnx', fp32: 'onnx/model.onnx',
+  q4f16: 'onnx/model_q4f16.onnx', q2f16: 'onnx/model_q2f16.onnx', fp16: 'onnx/model_fp16.onnx',
+};
 
 // f16 activations come last: on Apple Metal (Chrome 154, transformers.js 4.3.1) Qwen2.5-0.5B's q4f16 graph decodes
 // to word salad and fp16 loops, while q4 (f32 activations) answers correctly (test/browser/transformers.html,
 // 2026-10-08). kohra hit the same fp16 overflow on WebGPU (kohra README, "Known constraints").
 function pickDtype(model, caps) {
   const have = new Set(model.files.onnx.map((f) => f.name));
-  const order = caps.f16 ? ['q4', 'fp32', 'q4f16', 'fp16'] : ['q4', 'fp32'];
+  const order = caps.f16 ? ['q4', 'q2', 'fp32', 'q4f16', 'q2f16', 'fp16'] : ['q4', 'q2', 'fp32'];
   return order.find((d) => have.has(FILES[d])) || null;
 }
 
@@ -47,7 +50,8 @@ export const transformersBackend = {
     if (!model.formats.includes('onnx')) return { ok: false, code: 'format', reason: 'no ONNX graph in the repo' };
     // kohra's diffusion graphs are ONNX too, but transformers.js generate() is autoregressive only.
     if (model.tags?.includes('text-diffusion')) return { ok: false, code: 'model', reason: 'a text-diffusion model; transformers.js generate() is autoregressive only' };
-    const want = task || model.task;
+    // A repo with no Hub task tag (e.g. onnx-community/Ternary-Bonsai-4B-ONNX) is taken as text generation.
+    const want = task || model.task || 'text-generation';
     if (!transformersBackend.tasks.includes(want)) return { ok: false, code: 'task', reason: `task ${want || 'unknown'}; this back end runs ${transformersBackend.tasks.join(', ')}` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     if (want !== 'text-generation') {
@@ -62,7 +66,7 @@ export const transformersBackend = {
   },
 
   async load(model, { task, caps, onProgress, signal }) {
-    const want = task || model.task;
+    const want = task || model.task || 'text-generation';
     const lib = await import(CDN);
     const progress_callback = onProgress && ((p) => onProgress({ backend: 'transformers', ...p }));
     if (want !== 'text-generation') return loadPipeline(lib, model, want, { progress_callback, signal });
