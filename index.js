@@ -1,5 +1,6 @@
 // anyformer — one call to run any model in a browser tab. Plain ESM, no build step.
-export { load, plan, BACKENDS, DEFAULT_BUDGET, NoBackendError } from './src/load.js';
+export { load, plan, BACKENDS, DEFAULT_BUDGET } from './src/load.js';
+export { AnyformerError, isAnyformerError, ERROR_CODES } from './src/errors.js';
 export { probe, memory64 } from './src/probe.js';
 export { describe, fromHubInfo } from './src/describe.js';
 export { resolve, REFUSALS } from './src/resolve.js';

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fromHubInfo, plan, transformersBackend, kohraBackend, diskformerBackend } from '../index.js';
+import { budgetError } from '../src/backends/diskformer.js';
 
 const fixture = (name) => fromHubInfo(JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url))));
 const qwen = fixture('onnx-community_Qwen2.5-0.5B-Instruct');
@@ -68,4 +69,11 @@ test('resolver sends each repo to its back end', async () => {
     assert.equal(p.chosen, want, model.repo);
     assert.deepEqual(p.ranked, [want]);
   }
+});
+
+test('diskformer: the engine\'s load-time budget refusal becomes BUDGET_TOO_SMALL with need', () => {
+  const e = budgetError(new Error('GPU budget 2.50 GB is too small: weights that stay on the GPU, the KV cache and working buffers need 3.04 GB, and the expert cache at least 0.05 GB more'));
+  assert.equal(e.code, 'BUDGET_TOO_SMALL');
+  assert.equal(e.need, 3.09e9);
+  assert.equal(budgetError(new Error('no WebGPU adapter')), null);
 });

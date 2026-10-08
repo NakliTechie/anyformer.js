@@ -12,16 +12,18 @@ be killed mid-turn, and must not burn a user's disk or bandwidth by guessing.
 1. **One perception act: `anyformer_plan` (`plan()`).** One call returns the model's formats, architecture and task,
    the browser's caps, the budget, the chosen back end, and every back end's verdict. The agent never probes or
    fetches separately before deciding.
-2. **Closed vocabularies.** A refusal is `{code, reason, need?}` with `code` in `REFUSALS`: format · model · webgpu ·
+2. **Closed vocabularies.** Errors from load() and a session are `AnyformerError` with `code` in `ERROR_CODES`
+   (NO_BACKEND · LOAD_FAILED · BUDGET_TOO_SMALL+need · ABORTED · EXECUTION_FAILED · INVALID_ARGUMENT · DISPOSED),
+   checked by name and code (`isAnyformerError`), so two copies of the library agree. A refusal is `{code, reason, need?}` with `code` in `REFUSALS`: format · model · webgpu ·
    f16 · opfs · budget · threw. Each code has one remedy (`REFUSALS[code]`); `budget` carries `need`, the bytes that
    would pass. Tool consequences are `read` · `stages` · `mutates`. Tool errors are `{error}` data, never throws.
 3. **One verdict per next action.** `chosen` set → load. `chosen` null → read the codes: format/model → another repo;
    webgpu/f16/opfs → another browser or GPU (nothing in this tab fixes it); budget → re-plan with `need`; threw → a bug.
 4. **Bounded output.** `anyformer_plan` grows with the number of back ends, never with the repo's file count (the file
    list stays out). The journal holds the last 50 calls. `generate` returns one reply.
-5. **Every failure names its remedy.** `NoBackendError` lists each back end with its code and reason; `REFUSALS[code]`
+5. **Every failure names its remedy.** NO_BACKEND lists each back end with its code and reason; `REFUSALS[code]`
    is the next move.
-6. **Crash-safe and idempotent.** `plan` and `probe` have no side effects. Weights land in OPFS through diskformer's
+6. **Crash-safe and idempotent.** A session runs one generate at a time; dispose() waits for it and is idempotent. `plan` and `probe` have no side effects. Weights land in OPFS through diskformer's
    resumable ingest (an interrupted download resumes); transformers.js and kohra use the browser HTTP cache. Loading
    twice loads twice; it never corrupts a store.
 7. **The tool holds the memory.** `anyformer_sessions` renders the open sessions and the last 50 tool calls with the

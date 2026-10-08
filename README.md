@@ -50,9 +50,12 @@ commit. `BACKENDS` lists the back ends `load()` asks by default: each joins afte
 
 ## When no back end can run it
 
-`load()` throws `NoBackendError` naming each back end, its code and its reason. Codes are a closed set, each with one
+`load()` throws an `AnyformerError` with code `NO_BACKEND` and the plan, naming each back end, its code and its
+reason. Codes are a closed set, each with one
 remedy in `REFUSALS`: `format`, `model`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
-and `threw`.
+and `threw`. Every other failure is an `AnyformerError` too, with a code from `ERROR_CODES` (`LOAD_FAILED`,
+`BUDGET_TOO_SMALL`, `ABORTED`, `EXECUTION_FAILED`, `INVALID_ARGUMENT`, `DISPOSED`); check it with
+`isAnyformerError(e, code)`. A session runs one `generate()` at a time, in call order.
 
 ## Commands
 

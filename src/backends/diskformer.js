@@ -2,6 +2,8 @@
 // and an expert cache sized by the budget. Engines load from the CDN at load() time from diskformer's main branch,
 // which moves with diskformer's own work; set diskformerBackend.source to pin a release or point at a local copy.
 
+import { AnyformerError } from '../errors.js';
+
 // The GGUFs diskformer's engines are pinned to (GEMMA4_26B_A4B, QWEN36_35B_A3B in engines/*.js), with the smallest budget each
 // has passed its gate at and the measured decode speeds (diskformer README, M4 Pro, 2026-10-05).
 export const DISKFORMER_MODELS = [
@@ -17,11 +19,20 @@ export const DISKFORMER_MODELS = [
   },
 ];
 
+// diskformer's engines refuse a budget with a plain Error ("GPU budget 2.50 GB is too small: … need 3.04 GB, and the
+// expert cache at least 0.05 GB more"). Until they carry a code, read the two numbers to give BUDGET_TOO_SMALL a need.
+function budgetError(e) {
+  const m = /GPU budget [\d.]+ GB is too small\b.*?need ([\d.]+) GB.*?at least ([\d.]+) GB more/s.exec(e?.message || '');
+  return m && new AnyformerError('BUDGET_TOO_SMALL', `diskformer: ${e.message}`, { cause: e, need: Math.ceil((+m[1] + +m[2]) * 1e9) });
+}
+
 const match = (model) => DISKFORMER_MODELS.find((m) => m.repo === model.repo &&
   model.files.gguf.some((f) => f.name === m.file && f.size === m.size));
 
 // The speed measured at the largest budget not above this one.
 const speedAt = (m, budget) => m.speeds.filter(([b]) => b <= budget).at(-1)?.[1] ?? null;
+
+export { budgetError };
 
 export const diskformerBackend = {
   id: 'diskformer',
@@ -44,10 +55,13 @@ export const diskformerBackend = {
   async load(model, { budget, maxCtx = 1024, onProgress, signal }) {
     const m = match(model);
     const mod = await import(`${diskformerBackend.source}/${m.engine}`);
-    const engine = await mod[m.Engine].load(null, {
-      gpuBudgetBytes: budget, maxCtx, signal,
-      onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
-    });
+    let engine;
+    try {
+      engine = await mod[m.Engine].load(null, {
+        gpuBudgetBytes: budget, maxCtx, signal,
+        onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
+      });
+    } catch (e) { throw budgetError(e) || e; }
     return {
       engine,
       async *generate(messages, { maxNewTokens = 512, signal } = {}) {

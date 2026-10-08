@@ -110,7 +110,7 @@ export async function call(name, input = {}, door = 'direct') {
     return out;
   } catch (e) {
     record({ tool: name, door, ok: false, error: e.message });
-    return { error: e.message, ...(e.plan && { plan: brief(e.plan) }) };
+    return { error: e.message, ...(e.code && { code: e.code }), ...(e.need && { need: e.need }), ...(e.plan && { plan: brief(e.plan) }) };
   }
 }
 
