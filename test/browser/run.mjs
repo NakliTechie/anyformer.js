@@ -1,7 +1,7 @@
 // Runs one test page in headless Chrome and prints window.result; exit 0 pass, 1 fail, 2 timeout.
 //   node test/browser/run.mjs <page> [--port N] [--profile dir] [--minutes N] [--budget GB] [--query a=b&c=d]
 // <page> is a test page name (test/browser/<page>.html) or a path from the repo root (examples/chat/index.html).
-// kohra and diskformer load at their current main commit (looked up on GitHub), not jsDelivr's cached @main.
+// kohra, diskformer and LocalMind load at their current main commit (looked up on GitHub), not jsDelivr's cached @main.
 // diskformer-chat keeps a fixed port and profile by default: OPFS belongs to the origin, so the 14.4 GB model downloads
 // once across runs.
 import { spawn } from 'node:child_process';
@@ -32,9 +32,9 @@ await new Promise((r) => server.once('listening', r));
 const port = server.address().port, cdp = 9500 + (port % 400);
 
 const head = async (repo) => (await (await fetch(`https://api.github.com/repos/NakliTechie/${repo}/commits/main`)).json()).sha;
-const [kohra, diskformer] = await Promise.all([head('kohra'), head('diskformer.js')]);
-const q = new URLSearchParams({ kohra, diskformer, ...(arg('budget') && { budget: arg('budget') }), ...Object.fromEntries(new URLSearchParams(arg('query', ''))) });
-console.error(`kohra main ${kohra.slice(0, 7)}, diskformer main ${diskformer.slice(0, 7)}`);
+const [kohra, diskformer, localmind] = await Promise.all([head('kohra'), head('diskformer.js'), head('LocalMind')]);
+const q = new URLSearchParams({ kohra, diskformer, localmind, ...(arg('budget') && { budget: arg('budget') }), ...Object.fromEntries(new URLSearchParams(arg('query', ''))) });
+console.error(`kohra main ${kohra.slice(0, 7)}, diskformer main ${diskformer.slice(0, 7)}, LocalMind main ${localmind.slice(0, 7)}`);
 
 const profile = arg('profile') || (chat ? join(homedir(), '.cache/anyformer-chat-profile') : await mkdtemp(join(tmpdir(), 'anyformer-test-')));
 const chrome = spawn(process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',

@@ -1,0 +1,69 @@
+{
+ "id": "google/gemma-4-E4B-it-qat-mobile-transformers",
+ "sha": "8e3ac78f1a4a97c19f5f194ab362a2206f71d961",
+ "pipeline_tag": "any-to-any",
+ "tags": [
+  "transformers",
+  "safetensors",
+  "gemma4",
+  "any-to-any",
+  "arxiv:2607.02770",
+  "base_model:google/gemma-4-E4B-it",
+  "base_model:quantized:google/gemma-4-E4B-it",
+  "license:apache-2.0",
+  "endpoints_compatible",
+  "8-bit",
+  "gemma",
+  "region:us"
+ ],
+ "config": {
+  "model_type": "gemma4"
+ },
+ "siblings": [
+  {
+   "rfilename": "config.json",
+   "blobId": "a50eff925e6d8ddf716fa2833707cd684bfadea0",
+   "size": 6305
+  },
+  {
+   "rfilename": "generation_config.json",
+   "blobId": "76d3a00538aca6a1b85db3328e1b0f4e93316420",
+   "size": 209
+  },
+  {
+   "rfilename": "model.safetensors",
+   "blobId": "8e9cda1fd8fb684109e4e792d0d61f76aa66c15e",
+   "size": 3525094516,
+   "lfs": {
+    "sha256": "391946da2e0bec22288e9fe50a4d31d2401c9570ba3baaf0ba43d644dadeb1d4",
+    "size": 3525094516,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "preprocessor_config.json",
+   "blobId": "4adff307a29874c969eda7edb5d3f07faaef879d",
+   "size": 511
+  },
+  {
+   "rfilename": "processor_config.json",
+   "blobId": "5465974d23e1eca2c46c2809b26c997946ce0d90",
+   "size": 1689
+  },
+  {
+   "rfilename": "tokenizer.json",
+   "blobId": "1ff9f3e3439a939b971f9919e821bf87e835a503",
+   "size": 32169626,
+   "lfs": {
+    "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+    "size": 32169626,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "tokenizer_config.json",
+   "blobId": "766ea7fb935da6d1b5c43bcf82edd2ec50bc829f",
+   "size": 3082
+  }
+ ]
+}

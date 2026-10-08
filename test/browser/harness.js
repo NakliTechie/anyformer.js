@@ -1,8 +1,9 @@
-import { kohraBackend, diskformerBackend } from '../../index.js';
+import { kohraBackend, diskformerBackend, localmindBackend } from '../../index.js';
 
-// ?kohra=<sha>&diskformer=<sha> (set by run.mjs): load those commits instead of jsDelivr's cached @main.
+// ?kohra=<sha>&diskformer=<sha>&localmind=<sha> (set by run.mjs): load those commits instead of jsDelivr's cached @main.
 const q = new URLSearchParams(location.search);
 if (q.get('kohra')) kohraBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/kohra@${q.get('kohra')}/kohra.js`;
+if (q.get('localmind')) localmindBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/LocalMind@${q.get('localmind')}/src`;
 if (q.get('diskformer')) diskformerBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer')}/engines`;
 
 // Shared by the test pages: progress to window.progressText, the outcome to window.result and the title.
