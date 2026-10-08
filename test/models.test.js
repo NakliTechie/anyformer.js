@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { MODELS, BACKENDS, plan, fromHubInfo } from '../index.js';
 
 const entries = Object.values(MODELS).flatMap((family) => Object.values(family));
-const caps = { webgpu: true, f16: true, opfs: true };
+const caps = { webgpu: true, f16: true, subgroups: true, opfs: true };
 
 test('every MODELS entry names a registered back end and an existing browser test page', () => {
   for (const m of entries) {
