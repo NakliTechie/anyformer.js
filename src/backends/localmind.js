@@ -5,8 +5,8 @@
 //
 //   lfm2     src/lfm2_5.js           GGUF, general.architecture 'lfm2' (dense LFM2 / LFM2.5), Q4_0 Q8_0 Q4_K Q5_K Q6_K
 //   gemma4   src/gemma-4-e2b.js      Google's QAT-mobile safetensors export of Gemma 4 (E2B, E4B): config.json-driven
-//   qwen35   src/ternary_bonsai_2_27b.js  GGUF, 'qwen35' with Prism's ternary types (PTQ1_0, PQ2_0); other qwen35
-//            quant types are in the engine's tables but untested, so canRun takes Prism files only.
+//   qwen35   src/ternary_bonsai_2_27b.js  GGUF, 'qwen35' with Prism's ternary types (PTQ1_0, PQ2_0) only: a standard
+//            K-quant (unsloth/Qwen3.5-4B-GGUF Q4_K_M) fails with "This feature is not included in this bundle".
 // Speeds: LocalMind's quiet-machine engine bench (plan/bench-engines-quiet-2026-09-24.md, M4 Pro, 256 tokens, greedy).
 
 const ENGINES = {
@@ -81,6 +81,9 @@ export const localmindBackend = {
     };
     const engine = await mod[e.Engine].load(model.repo, opts);
     signal?.throwIfAborted();
+    // Thinking off, as the diskformer back end does: a chat reply, not the model's reasoning. (The qwen35 engine
+    // takes template arguments as a field; LocalMind sets the same one.)
+    if ('chatTemplateArgs' in engine) engine.chatTemplateArgs = { ...engine.chatTemplateArgs, enable_thinking: false };
     // Compile the kernels now, as LocalMind's workers do, so the first reply is not paying for it.
     onProgress?.({ backend: 'localmind', engine: m.engine, status: 'warmup' });
     await engine.warmup?.();

@@ -19,6 +19,11 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
   const fixtures = {
     'onnx-community/Qwen2.5-0.5B-Instruct': 'onnx-community_Qwen2.5-0.5B-Instruct',
     'onnx-community/Ternary-Bonsai-4B-ONNX': 'onnx-community_Ternary-Bonsai-4B-ONNX',
+    'LiquidAI/LFM2.5-230M-GGUF': 'LiquidAI_LFM2.5-230M-GGUF',
+    'LiquidAI/LFM2.5-1.2B-Instruct-GGUF': 'LiquidAI_LFM2.5-1.2B-Instruct-GGUF',
+    'google/gemma-4-E2B-it-qat-mobile-transformers': 'google_gemma-4-E2B-it-qat-mobile-transformers',
+    'google/gemma-4-E4B-it-qat-mobile-transformers': 'google_gemma-4-E4B-it-qat-mobile-transformers',
+    'prism-ml/Ternary-Bonsai-2-27B-gguf': 'prism-ml_Ternary-Bonsai-2-27B-gguf',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',

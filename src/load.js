@@ -4,10 +4,11 @@ import { resolve } from './resolve.js';
 import { transformersBackend } from './backends/transformers.js';
 import { kohraBackend } from './backends/kohra.js';
 import { diskformerBackend } from './backends/diskformer.js';
+import { localmindBackend } from './backends/localmind.js';
 import { AnyformerError, wrap } from './errors.js';
 
 // Back ends land here as each one passes its browser test (test/browser/). The list order breaks ties.
-export const BACKENDS = [transformersBackend, kohraBackend, diskformerBackend];
+export const BACKENDS = [transformersBackend, kohraBackend, diskformerBackend, localmindBackend];
 
 // 2.5 GB: the smallest budget diskformer's chat gate passes at. Browsers do not report GPU memory, so a caller that
 // knows more passes { budget }.

@@ -54,6 +54,7 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 |---|---|---|
 | `transformers` | transformers.js 4.3.1: text generation, embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
 | `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion` |
+| `localmind` | LocalMind's hand-written WebGPU kernels, the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
 | `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
 
 kohra and diskformer load from their `main` branches; set `kohraBackend.source` or `diskformerBackend.source` to pin a
@@ -100,6 +101,7 @@ npm run test:browser -- detect            # DETR finds both cats in cats.jpg
 npm run test:browser -- examples/chat/index.html --query "auto=1"   # the workbench loads and answers
 npm run test:browser -- pipeline --port 8192 --profile ~/.cache/anyformer-chat-profile   # pipeline() on a GGUF
 npm run test:browser -- store             # list a download, remove it
+npm run test:browser -- localmind --query "repo=LiquidAI/LFM2.5-1.2B-Instruct-GGUF"   # a LocalMind engine
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```
 
@@ -109,4 +111,4 @@ from llama.cpp's by one character. Only Apple silicon (M4 Pro, Chrome) has run t
 ## License
 
 MIT. Spec and agent contract: [SPEC.md](SPEC.md) · depends on [diskformer.js](https://github.com/NakliTechie/diskformer.js)
-· [kohra](https://github.com/NakliTechie/kohra)
+· [kohra](https://github.com/NakliTechie/kohra) · [LocalMind](https://github.com/NakliTechie/LocalMind)
