@@ -27,7 +27,8 @@ export function fromHubInfo(info, { endpoint = HF } = {}) {
     task: info.pipeline_tag || null,
     // Hub tags carry what format and architecture miss, e.g. 'text-diffusion' marks a kohra model.
     tags: info.tags || [],
-    files: { gguf, onnx, safetensors },
+    // all: every file, for the side files a format splits off (ONNX external data, tokenizers).
+    files: { gguf, onnx, safetensors, all: files },
     ggufTotalBytes: info.gguf?.total ?? null,
   };
 }
