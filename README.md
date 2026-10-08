@@ -29,6 +29,15 @@ vision, 16 kHz samples for speech. `load(repo, { task })` picks a task when a re
 downloads the weights into the browser; later loads read them from there. Each back end's runtime loads
 from jsDelivr only when that back end is chosen.
 
+## Try it
+
+Serve the repo and open the workbench: pick a model, see which back end anyformer chose and why every other one
+refused, chat, and remove downloads.
+
+```bash
+python3 -m http.server 8000      # then open http://localhost:8000/examples/chat/
+```
+
 ## Why
 
 You have a model id and a browser tab. Whether it runs depends on its format (ONNX, GGUF), its architecture, whether it
@@ -87,6 +96,7 @@ npm run test:browser -- transformers       # Qwen2.5-0.5B answers on topic
 npm run test:browser -- kohra              # Qwen3-0.6B MDLM answers on topic
 npm run test:browser -- embed             # MiniLM embeddings rank a paraphrase above an unrelated sentence
 npm run test:browser -- detect            # DETR finds both cats in cats.jpg
+npm run test:browser -- examples/chat/index.html --query "auto=1"   # the workbench loads and answers
 npm run test:browser -- store             # list a download, remove it
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
 ```

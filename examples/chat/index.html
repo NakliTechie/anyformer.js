@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- Unity: a workbench for one model at a time: why anyformer picked its back end, what is on disk, and a chat. Dense. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>anyformer workbench</title>
+<style>
+  :root {
+    --bg: #f6f7f8; --panel: #fff; --ink: rgba(10, 20, 30, .92); --ink-2: rgba(10, 20, 30, .62); --ink-3: rgba(10, 20, 30, .38);
+    --line: rgba(10, 20, 30, .12); --accent: #2463eb; --bad: #b42318; --good: #1a7f37;
+    font: 14px/1.45 ui-sans-serif, -apple-system, "Segoe UI", sans-serif; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1116; --panel: #161b22; --ink: rgba(235, 240, 245, .92); --ink-2: rgba(235, 240, 245, .62); --ink-3: rgba(235, 240, 245, .38);
+      --line: rgba(235, 240, 245, .12); --accent: #5b8def; --bad: #f47067; --good: #57ab5a; color-scheme: dark;
+    }
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink); }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .muted { color: var(--ink-2); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); margin: 0 0 8px; font-weight: 600; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select, input, textarea, button { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+  input[type=number] { width: 6em; }
+  select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+  main > * { min-width: 0; }
+  td code { word-break: break-all; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { text-align: left; padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink-2); font-weight: 500; border-top: 0; }
+  #verdicts td:nth-child(-n+3) { white-space: nowrap; }
+  .ok { color: var(--good); } .no { color: var(--bad); }
+  code { font: 12px ui-monospace, Menlo, monospace; }
+  #log { display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
+  .msg { white-space: pre-wrap; padding: 8px; border-radius: 4px; border: 1px solid var(--line); }
+  .msg.user { background: var(--bg); }
+  form { display: flex; gap: 8px; margin-top: 8px; }
+  form textarea { flex: 1; resize: vertical; }
+  #status { min-height: 1.4em; }
+  @media (max-width: 640px) { #verdicts td:nth-child(4), #verdicts th:nth-child(4) { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>anyformer workbench</h1>
+    <span class="muted">Runs in this tab on your GPU. Weights stay in this browser.</span>
+  </header>
+
+  <section>
+    <h2>Model</h2>
+    <div class="row">
+      <select id="model"></select>
+      <label>budget GB <input id="budget" type="number" min="0.5" step="0.5"></label>
+      <button id="plan">Plan</button>
+      <button id="load" class="primary">Load</button>
+    </div>
+    <p id="status" class="muted"></p>
+    <table id="verdicts" hidden>
+      <thead><tr><th>back end</th><th>verdict</th><th>GPU / disk</th><th>why</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="chat" hidden>
+    <h2>Chat</h2>
+    <div id="log"></div>
+    <form id="ask">
+      <textarea id="q" rows="2" placeholder="Ask something"></textarea>
+      <button class="primary" id="send">Send</button>
+      <button type="button" id="stop" disabled>Stop</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Stored in this browser</h2>
+    <table id="store"><thead><tr><th>repo</th><th>back end</th><th>size</th><th></th></tr></thead><tbody></tbody></table>
+  </section>
+</main>
+
+<script type="module">
+import { MODELS, plan, load, stored, remove, registerTools, isAnyformerError, REFUSALS } from '../../index.js';
+
+const $ = (id) => document.getElementById(id);
+const GB = (b) => (b == null ? '' : `${(b / 1e9).toFixed(2)} GB`);
+const q = new URLSearchParams(location.search);
+registerTools();                                   // the agent face: navigator.modelContext, or window.anyformer.tools
+
+const chats = Object.entries(MODELS.chat).filter(([k]) => k !== 'DEFAULT');
+for (const [k, m] of chats) $('model').append(new Option(`${m.repo}  ·  ${m.backend}  ·  ${GB(m.downloadBytes)}`, k));
+$('model').value = q.get('model') || chats.find(([, m]) => m === MODELS.chat.DEFAULT)[0];
+const entry = () => MODELS.chat[$('model').value];
+const syncBudget = () => { $('budget').value = (entry().budget || 2.5e9) / 1e9; };
+syncBudget();
+$('model').onchange = syncBudget;
+const opts = () => ({ budget: Number($('budget').value) * 1e9 });
+
+let session = null, ctrl = null, history = [];
+const status = (s, bad) => { $('status').textContent = s; $('status').className = bad ? 'no' : 'muted'; window.progressText = s; };
+
+function showPlan(p) {
+  const body = $('verdicts').tBodies[0];
+  body.replaceChildren(...p.candidates.map((c) => {
+    const tr = document.createElement('tr');
+    const why = c.ok ? (c.backend === p.chosen ? 'chosen' : 'ranked lower') : `${c.reason} → ${REFUSALS[c.code]}`;
+    tr.innerHTML = `<td><code></code></td><td class="${c.ok ? 'ok' : 'no'}"></td><td></td><td class="muted"></td>`;
+    tr.cells[0].firstChild.textContent = c.backend;
+    tr.cells[1].textContent = c.ok ? 'can run' : c.code;
+    tr.cells[2].textContent = c.ok ? `${GB(c.estimate.gpuBytes)} / ${GB(c.estimate.diskBytes)}` : '';
+    tr.cells[3].textContent = why;
+    return tr;
+  }));
+  $('verdicts').hidden = false;
+}
+
+$('plan').onclick = async () => {
+  status('Planning…');
+  try { const p = await plan(entry(), opts()); showPlan(p); status(p.chosen ? `${p.chosen} runs it.` : 'No back end can run it here.', !p.chosen); }
+  catch (e) { status(e.message, true); }
+};
+
+$('load').onclick = async () => {
+  if (session) { await session.dispose(); session = null; }
+  $('load').disabled = true; $('chat').hidden = true; history = []; $('log').replaceChildren();
+  const t0 = performance.now();
+  try {
+    session = await load(entry(), {
+      ...opts(),
+      // diskformer counts tensors in its 'weights' step and bytes elsewhere; transformers.js reports a percentage.
+      onProgress: (e) => status(`${e.backend}: ${e.status}${e.kind ? ' ' + e.kind : ''}${e.file ? ' ' + e.file : ''}${
+        e.kind === 'tensors' ? ` ${e.loaded} of ${e.total}` : e.total ? ` ${GB(e.loaded)} of ${GB(e.total)}` : e.progress ? ` ${e.progress.toFixed(0)}%` : ''}`),
+    });
+    showPlan(session.plan);
+    status(`Loaded on ${session.backend} in ${((performance.now() - t0) / 1e3).toFixed(1)} s.`);
+    $('chat').hidden = false; $('q').focus();
+    await refreshStore();
+  } catch (e) {
+    if (isAnyformerError(e) && e.plan) showPlan(e.plan);
+    status(`${e.code || 'Error'}: ${e.message}${e.need ? ` (needs ${GB(e.need)})` : ''}`, true);
+  } finally { $('load').disabled = false; }
+};
+
+function bubble(cls, text) { const d = document.createElement('div'); d.className = `msg ${cls}`; d.textContent = text; $('log').append(d); d.scrollIntoView({ block: 'end' }); return d; }
+
+// One exchange: stream the reply, return { text, tokens, tokPerSec }.
+async function ask(text, maxNewTokens = 256) {
+  history.push({ role: 'user', content: text });
+  bubble('user', text);
+  const out = bubble('model', '…');
+  ctrl = new AbortController(); $('stop').disabled = false; $('send').disabled = true;
+  let last = { text: '', tokens: 0 }, tFirst = 0, firstTokens = 0;
+  try {
+    for await (const c of session.generate(history, { maxNewTokens, signal: ctrl.signal })) {
+      if (!tFirst) { tFirst = performance.now(); firstTokens = c.tokens; }
+      last = c; out.textContent = c.text;
+    }
+  } finally { ctrl = null; $('stop').disabled = true; $('send').disabled = false; }
+  history.push({ role: 'assistant', content: last.text });
+  const secs = (performance.now() - tFirst) / 1e3;
+  const tokPerSec = last.tokPerSec || (last.tokens > firstTokens ? (last.tokens - firstTokens) / secs : null);
+  status(`${last.tokens} tokens${tokPerSec ? `, ${tokPerSec.toFixed(1)} tok/s` : ''} on ${session.backend}.`);
+  return { text: last.text, tokens: last.tokens, tokPerSec };
+}
+
+$('ask').onsubmit = (ev) => { ev.preventDefault(); const t = $('q').value.trim(); if (t) { $('q').value = ''; ask(t).catch((e) => status(e.message, true)); } };
+$('q').onkeydown = (ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); $('ask').requestSubmit(); } };
+$('stop').onclick = () => ctrl?.abort();
+
+async function refreshStore() {
+  const rows = await stored();
+  $('store').tBodies[0].replaceChildren(...(rows.length ? rows : [null]).map((r) => {
+    const tr = document.createElement('tr');
+    if (!r) { tr.innerHTML = '<td class="muted" colspan="4">Nothing downloaded yet.</td>'; return tr; }
+    tr.innerHTML = '<td><code></code></td><td></td><td></td><td><button>Remove</button></td>';
+    tr.cells[0].firstChild.textContent = r.repo; tr.cells[1].textContent = r.backend; tr.cells[2].textContent = GB(r.bytes);
+    tr.querySelector('button').onclick = async () => {
+      if (!confirm(`Remove ${r.repo} (${GB(r.bytes)})? The next load downloads it again.`)) return;
+      await remove(r.repo); await refreshStore();
+    };
+    return tr;
+  }));
+}
+refreshStore();
+
+// ?auto=1: load the chosen model, ask one question, publish window.result (used by test/browser/run.mjs).
+window.workbench = { ask, get session() { return session; } };
+if (q.get('auto')) (async () => {
+  try {
+    await $('load').onclick();
+    if (!session) throw new Error($('status').textContent);
+    const r = await ask('Explain what a CPU does in two sentences.', 32);
+    window.result = { ok: r.tokens > 0, backend: session.backend, ...r };
+  } catch (e) { window.result = { ok: false, error: e.message }; }
+})();
+</script>
+</body>
+</html>

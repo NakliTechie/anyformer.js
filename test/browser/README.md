@@ -13,6 +13,7 @@ and exits 0 on pass, 1 on fail, 2 on timeout.
 | `detect` | Xenova/detr-resnet-50 finds both cats in transformers.js's `cats.jpg` |
 | `store` | MiniLM appears in `stored()` after a load; the agent tool stages; `remove()` frees the same bytes |
 | `stored` | lists the store, changes nothing (run with the chat profile to see Gemma) |
+| `examples/chat/index.html --query "auto=1"` | the workbench loads the default chat model and answers; `model=GEMMA4_26B_A4B` with the chat port and profile runs Gemma |
 | `diskformer-chat` | Gemma 4 26B-A4B at a 2.5 GB budget: 9/9 replies identical to llama.cpp b9830 (diskformer's chat gate) |
 
 ```bash
