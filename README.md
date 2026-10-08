@@ -33,7 +33,7 @@ from jsDelivr only when that back end is chosen.
 ## Try it
 
 Serve the repo and open the workbench: pick a model, see which back end anyformer chose and why every other one
-refused, chat, and remove downloads.
+refused, then chat (with an image for the vision models), compare embeddings, or detect objects; remove downloads.
 
 ```bash
 python3 -m http.server 8000      # then open http://localhost:8000/examples/chat/

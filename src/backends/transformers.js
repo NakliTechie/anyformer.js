@@ -94,7 +94,8 @@ export const transformersBackend = {
     return fits(bytes, { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } });
   },
 
-  // dtype overrides the precision pick (the repo must ship it). generate() takes repetitionPenalty (default 1, none).
+  // dtype overrides the precision pick (the repo must ship it). generate() takes repetitionPenalty; without it the
+  // model's own generation_config.json applies (Qwen2.5 ships 1.05), as in transformers.js itself.
   async load(model, { task, caps, dtype: forced, onProgress, signal }) {
     const want = task || model.task || 'text-generation';
     const lib = await import(transformersBackend.source);
@@ -108,8 +109,8 @@ export const transformersBackend = {
     signal?.throwIfAborted();
     return {
       task: 'text-generation',
-      generate: (messages, { maxNewTokens = 256, repetitionPenalty = 1, signal } = {}) => stream(lib, gen.tokenizer, signal,
-        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, repetition_penalty: repetitionPenalty, streamer, stopping_criteria })),
+      generate: (messages, { maxNewTokens = 256, repetitionPenalty, signal } = {}) => stream(lib, gen.tokenizer, signal,
+        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), streamer, stopping_criteria })),
       dispose: () => gen.dispose?.(),
     };
   },
@@ -169,7 +170,7 @@ async function loadMultimodal(lib, model, dtype, { progress_callback, signal }) 
     : typeof x === 'string' ? lib.load_image(x) : x);
   return {
     task: 'text-generation',
-    generate: (messages, { maxNewTokens = 256, repetitionPenalty = 1, signal } = {}) => stream(lib, processor.tokenizer, signal, async (streamer, stopping_criteria) => {
+    generate: (messages, { maxNewTokens = 256, repetitionPenalty, signal } = {}) => stream(lib, processor.tokenizer, signal, async (streamer, stopping_criteria) => {
       const images = [], audios = [];
       const plain = messages.map((m) => (typeof m.content === 'string' ? m : {
         ...m,
@@ -183,7 +184,7 @@ async function loadMultimodal(lib, model, dtype, { progress_callback, signal }) 
       const imgs = await Promise.all(images.map(toImage));
       const one = (a) => (a.length ? (a.length === 1 ? a[0] : a) : null);
       const inputs = await processor(prompt, one(imgs), one(audios), { add_special_tokens: false });
-      return net.generate({ ...inputs, max_new_tokens: maxNewTokens, do_sample: false, repetition_penalty: repetitionPenalty, streamer, stopping_criteria });
+      return net.generate({ ...inputs, max_new_tokens: maxNewTokens, do_sample: false, ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), streamer, stopping_criteria });
     }),
     dispose: () => net.dispose?.(),
   };

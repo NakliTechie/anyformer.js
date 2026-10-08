@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- Unity: a workbench for one model at a time: why anyformer picked its back end, what is on disk, and a chat. Dense. -->
+<!-- Unity: a workbench for one model at a time: why anyformer picked its back end, what is on disk, and the model's
+     task (chat, chat with images, embeddings, detection) to try. Dense. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -19,6 +20,7 @@
   }
   body { margin: 0; background: var(--bg); color: var(--ink); }
   main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+  main > * { min-width: 0; }
   header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   h1 { font-size: 16px; margin: 0; font-weight: 600; }
   .muted { color: var(--ink-2); }
@@ -28,8 +30,6 @@
   select, input, textarea, button { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
   input[type=number] { width: 6em; }
   select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
-  main > * { min-width: 0; }
-  td code { word-break: break-all; }
   button { cursor: pointer; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button:disabled { opacity: .5; cursor: default; }
@@ -37,14 +37,21 @@
   td, th { text-align: left; padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: top; }
   th { color: var(--ink-2); font-weight: 500; border-top: 0; }
   #verdicts td:nth-child(-n+3) { white-space: nowrap; }
+  td code { word-break: break-all; }
   .ok { color: var(--good); } .no { color: var(--bad); }
   code { font: 12px ui-monospace, Menlo, monospace; }
   #log { display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
   .msg { white-space: pre-wrap; padding: 8px; border-radius: 4px; border: 1px solid var(--line); }
   .msg.user { background: var(--bg); }
-  form { display: flex; gap: 8px; margin-top: 8px; }
-  form textarea { flex: 1; resize: vertical; }
+  .msg img { display: block; max-height: 120px; max-width: 100%; margin-bottom: 6px; border-radius: 3px; }
+  form { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  form textarea { flex: 1 1 240px; resize: vertical; }
+  #attached { display: flex; align-items: center; gap: 6px; }
+  #attached img { max-height: 36px; border-radius: 3px; }
   #status { min-height: 1.4em; }
+  .task[hidden] { display: none; }
+  #sim td { text-align: right; } #sim td:first-child { text-align: left; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #detectCanvas { max-width: 100%; height: auto; display: block; margin-top: 8px; border-radius: 4px; }
   @media (max-width: 640px) { #verdicts td:nth-child(4), #verdicts th:nth-child(4) { display: none; } }
 </style>
 </head>
@@ -70,14 +77,37 @@
     </table>
   </section>
 
-  <section id="chat" hidden>
+  <section id="chat" class="task" hidden>
     <h2>Chat</h2>
     <div id="log"></div>
     <form id="ask">
       <textarea id="q" rows="2" placeholder="Ask something"></textarea>
+      <span id="attached" hidden><img alt="Attached image"><button type="button" id="unattach" title="Remove the image">×</button></span>
+      <label id="attachLabel" hidden><input id="file" type="file" accept="image/*" hidden><span class="muted">Image…</span></label>
       <button class="primary" id="send">Send</button>
       <button type="button" id="stop" disabled>Stop</button>
     </form>
+  </section>
+
+  <section id="embed" class="task" hidden>
+    <h2>Embeddings</h2>
+    <p class="muted">One sentence per line. The table shows cosine similarity between every pair.</p>
+    <textarea id="lines" rows="4" style="width: 100%; box-sizing: border-box">A cat sleeps on the sofa.
+A kitten naps on the couch.
+The invoice is due on Friday.</textarea>
+    <div class="row" style="margin-top: 8px"><button class="primary" id="embedRun">Compare</button></div>
+    <table id="sim"></table>
+  </section>
+
+  <section id="detect" class="task" hidden>
+    <h2>Object detection</h2>
+    <div class="row">
+      <label><input id="detectFile" type="file" accept="image/*" hidden><span class="muted">Image…</span></label>
+      <button id="detectSample">Sample image</button>
+      <label>threshold <input id="threshold" type="number" min="0.1" max="0.99" step="0.05" value="0.9"></label>
+    </div>
+    <canvas id="detectCanvas" hidden></canvas>
+    <table id="found"></table>
   </section>
 
   <section>
@@ -92,18 +122,32 @@ import { MODELS, plan, load, stored, remove, registerTools, isAnyformerError, RE
 const $ = (id) => document.getElementById(id);
 const GB = (b) => (b == null ? '' : `${(b / 1e9).toFixed(2)} GB`);
 const q = new URLSearchParams(location.search);
+// Two cats on a sofa (the image transformers.js's docs use).
+const SAMPLE = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/cats.jpg';
 registerTools();                                   // the agent face: navigator.modelContext, or window.anyformer.tools
 
-const chats = Object.entries(MODELS.chat).filter(([k]) => k !== 'DEFAULT');
-for (const [k, m] of chats) $('model').append(new Option(`${m.repo}  ·  ${m.backend}  ·  ${GB(m.downloadBytes)}`, k));
-$('model').value = q.get('model') || chats.find(([, m]) => m === MODELS.chat.DEFAULT)[0];
-const entry = () => MODELS.chat[$('model').value];
+// Every MODELS entry by family; the option value is "family.KEY". The family picks the task panel.
+const FAMILY = { chat: 'Chat', vision: 'Chat with images', embedding: 'Embeddings', objectDetection: 'Object detection' };
+const PANEL = { chat: 'chat', vision: 'chat', embedding: 'embed', objectDetection: 'detect' };
+for (const [family, label] of Object.entries(FAMILY)) {
+  const group = document.createElement('optgroup');
+  group.label = label;
+  for (const [k, m] of Object.entries(MODELS[family] || {})) {
+    if (k === 'DEFAULT') continue;
+    group.append(new Option(`${m.repo}  ·  ${m.backend}  ·  ${GB(m.downloadBytes)}`, `${family}.${k}`));
+  }
+  $('model').append(group);
+}
+const defaultKey = () => `chat.${Object.entries(MODELS.chat).find(([k, m]) => k !== 'DEFAULT' && m === MODELS.chat.DEFAULT)[0]}`;
+$('model').value = q.get('model')?.includes('.') ? q.get('model') : q.get('model') ? `chat.${q.get('model')}` : defaultKey();
+const family = () => $('model').value.split('.')[0];
+const entry = () => { const [f, k] = $('model').value.split('.'); return MODELS[f][k]; };
 const syncBudget = () => { $('budget').value = (entry().budget || 2.5e9) / 1e9; };
 syncBudget();
 $('model').onchange = syncBudget;
 const opts = () => ({ budget: Number($('budget').value) * 1e9 });
 
-let session = null, ctrl = null, history = [];
+let session = null, ctrl = null, history = [], image = null;
 const status = (s, bad) => { $('status').textContent = s; $('status').className = bad ? 'no' : 'muted'; window.progressText = s; };
 
 function showPlan(p) {
@@ -111,9 +155,10 @@ function showPlan(p) {
   body.replaceChildren(...p.candidates.map((c) => {
     const tr = document.createElement('tr');
     const why = c.ok ? (c.backend === p.chosen ? 'chosen' : 'ranked lower') : `${c.reason} → ${REFUSALS[c.code]}`;
-    tr.innerHTML = `<td><code></code></td><td class="${c.ok ? 'ok' : 'no'}"></td><td></td><td class="muted"></td>`;
+    tr.innerHTML = '<td><code></code></td><td></td><td></td><td class="muted"></td>';
     tr.cells[0].firstChild.textContent = c.backend;
     tr.cells[1].textContent = c.ok ? 'can run' : c.code;
+    tr.cells[1].className = c.ok ? 'ok' : 'no';
     tr.cells[2].textContent = c.ok ? `${GB(c.estimate.gpuBytes)} / ${GB(c.estimate.diskBytes)}` : '';
     tr.cells[3].textContent = why;
     return tr;
@@ -127,9 +172,14 @@ $('plan').onclick = async () => {
   catch (e) { status(e.message, true); }
 };
 
+function showPanel() {
+  for (const el of document.querySelectorAll('.task')) el.hidden = !session || el.id !== PANEL[family()];
+  $('attachLabel').hidden = family() !== 'vision';
+}
+
 $('load').onclick = async () => {
   if (session) { await session.dispose(); session = null; }
-  $('load').disabled = true; $('chat').hidden = true; history = []; $('log').replaceChildren();
+  $('load').disabled = true; showPanel(); history = []; $('log').replaceChildren(); setImage(null);
   const t0 = performance.now();
   try {
     session = await load(entry(), {
@@ -139,8 +189,8 @@ $('load').onclick = async () => {
         e.kind === 'tensors' ? ` ${e.loaded} of ${e.total}` : e.total ? ` ${GB(e.loaded)} of ${GB(e.total)}` : e.progress ? ` ${e.progress.toFixed(0)}%` : ''}`),
     });
     showPlan(session.plan);
-    status(`Loaded on ${session.backend} in ${((performance.now() - t0) / 1e3).toFixed(1)} s.`);
-    $('chat').hidden = false; $('q').focus();
+    status(`Loaded on ${session.backend}${session.device ? ` (${session.device})` : ''} in ${((performance.now() - t0) / 1e3).toFixed(1)} s.`);
+    showPanel();
     await refreshStore();
   } catch (e) {
     if (isAnyformerError(e) && e.plan) showPlan(e.plan);
@@ -148,19 +198,45 @@ $('load').onclick = async () => {
   } finally { $('load').disabled = false; }
 };
 
-function bubble(cls, text) { const d = document.createElement('div'); d.className = `msg ${cls}`; d.textContent = text; $('log').append(d); d.scrollIntoView({ block: 'end' }); return d; }
+// ── Chat, with an optional image for the vision family ──
+const toImageData = async (blobOrUrl) => {
+  const blob = typeof blobOrUrl === 'string' ? await (await fetch(blobOrUrl)).blob() : blobOrUrl;
+  const bmp = await createImageBitmap(blob);
+  const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d');
+  c.drawImage(bmp, 0, 0);
+  return { data: c.getImageData(0, 0, bmp.width, bmp.height), url: URL.createObjectURL(blob), bitmap: bmp };
+};
+function setImage(img) {
+  image = img;
+  $('attached').hidden = !img;
+  if (img) $('attached').querySelector('img').src = img.url;
+}
+$('file').onchange = async () => { if ($('file').files[0]) setImage(await toImageData($('file').files[0])); $('file').value = ''; };
+$('unattach').onclick = () => setImage(null);
+$('q').addEventListener('paste', async (ev) => {
+  const item = [...ev.clipboardData.items].find((i) => i.type.startsWith('image/'));
+  if (item && family() === 'vision') { ev.preventDefault(); setImage(await toImageData(item.getAsFile())); }
+});
+
+function bubble(cls, text, img) {
+  const d = document.createElement('div'); d.className = `msg ${cls}`;
+  if (img) { const i = document.createElement('img'); i.src = img.url; i.alt = 'Attached image'; d.append(i); }
+  d.append(text); $('log').append(d); d.scrollIntoView({ block: 'end' }); return d;
+}
 
 // One exchange: stream the reply, return { text, tokens, tokPerSec }.
-async function ask(text, maxNewTokens = 256) {
-  history.push({ role: 'user', content: text });
-  bubble('user', text);
+async function ask(text, maxNewTokens = 256, img = image) {
+  const content = img ? [{ type: 'image', image: img.data }, { type: 'text', text }] : text;
+  history.push({ role: 'user', content });
+  bubble('user', text, img);
+  setImage(null);
   const out = bubble('model', '…');
   ctrl = new AbortController(); $('stop').disabled = false; $('send').disabled = true;
   let last = { text: '', tokens: 0 }, tFirst = 0, firstTokens = 0;
   try {
     for await (const c of session.generate(history, { maxNewTokens, signal: ctrl.signal })) {
       if (!tFirst) { tFirst = performance.now(); firstTokens = c.tokens; }
-      last = c; out.textContent = c.text;
+      last = c; out.lastChild.textContent = c.text;
     }
   } finally { ctrl = null; $('stop').disabled = true; $('send').disabled = false; }
   history.push({ role: 'assistant', content: last.text });
@@ -174,6 +250,56 @@ $('ask').onsubmit = (ev) => { ev.preventDefault(); const t = $('q').value.trim()
 $('q').onkeydown = (ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); $('ask').requestSubmit(); } };
 $('stop').onclick = () => ctrl?.abort();
 
+// ── Embeddings: cosine similarity between every pair of lines ──
+async function compare() {
+  const lines = $('lines').value.split('\n').map((s) => s.trim()).filter(Boolean);
+  if (lines.length < 2) { status('Two lines at least.', true); return null; }
+  const t0 = performance.now();
+  const vecs = await session.run(lines);
+  const cos = (a, b) => { let d = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return d / Math.sqrt(x * y); };
+  const m = vecs.map((a) => vecs.map((b) => cos(a, b)));
+  const head = document.createElement('tr');
+  head.innerHTML = '<th></th>' + lines.map((_, i) => `<th>${i + 1}</th>`).join('');
+  $('sim').replaceChildren(head, ...lines.map((l, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td></td>' + m[i].map((v) => `<td>${v.toFixed(3)}</td>`).join('');
+    tr.cells[0].textContent = `${i + 1}. ${l}`; tr.cells[0].title = l;
+    return tr;
+  }));
+  status(`${lines.length} embeddings of ${vecs[0].length} dimensions in ${((performance.now() - t0) / 1e3).toFixed(2)} s.`);
+  return { lines, dims: vecs[0].length, matrix: m };
+}
+$('embedRun').onclick = () => compare().catch((e) => status(e.message, true));
+
+// ── Detection: boxes over the image ──
+async function detect(src) {
+  const img = await toImageData(src);
+  const t0 = performance.now();
+  const found = await session.run(img.data, { threshold: Number($('threshold').value) });
+  const cv = $('detectCanvas');
+  cv.width = img.bitmap.width; cv.height = img.bitmap.height; cv.hidden = false;
+  const g = cv.getContext('2d');
+  g.drawImage(img.bitmap, 0, 0);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+  g.lineWidth = Math.max(2, cv.width / 300); g.font = `${Math.max(14, cv.width / 22)}px ui-sans-serif`; g.strokeStyle = g.fillStyle = accent;
+  for (const o of found) {
+    const { xmin, ymin, xmax, ymax } = o.box;
+    g.strokeRect(xmin, ymin, xmax - xmin, ymax - ymin);
+    g.fillText(`${o.label} ${o.score.toFixed(2)}`, xmin + 4, ymin + parseInt(g.font) + 2);
+  }
+  $('found').replaceChildren(...found.map((o) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td></td><td></td>';
+    tr.cells[0].textContent = o.label; tr.cells[1].textContent = o.score.toFixed(3);
+    return tr;
+  }));
+  status(`${found.length} objects in ${((performance.now() - t0) / 1e3).toFixed(2)} s.`);
+  return found.map((o) => ({ label: o.label, score: +o.score.toFixed(3) }));
+}
+$('detectFile').onchange = () => { if ($('detectFile').files[0]) detect($('detectFile').files[0]).catch((e) => status(e.message, true)); $('detectFile').value = ''; };
+$('detectSample').onclick = () => detect(SAMPLE).catch((e) => status(e.message, true));
+
+// ── Store ──
 async function refreshStore() {
   const rows = await stored();
   $('store').tBodies[0].replaceChildren(...(rows.length ? rows : [null]).map((r) => {
@@ -190,14 +316,20 @@ async function refreshStore() {
 }
 refreshStore();
 
-// ?auto=1: load the chosen model, ask one question, publish window.result (used by test/browser/run.mjs).
-window.workbench = { ask, get session() { return session; } };
+// ?auto=1: load the chosen model, run its task once, publish window.result (used by test/browser/run.mjs).
+//   chat: one question; vision: the sample image with a question; embedding: the default lines; detection: the sample.
+window.workbench = { ask, compare, detect, get session() { return session; } };
 if (q.get('auto')) (async () => {
   try {
     await $('load').onclick();
     if (!session) throw new Error($('status').textContent);
-    const r = await ask('Explain what a CPU does in two sentences.', 32);
-    window.result = { ok: r.tokens > 0, backend: session.backend, ...r };
+    const f = family();
+    let r;
+    if (f === 'chat') { r = await ask('Explain what a CPU does in two sentences.', 32); r.ok = r.tokens > 0; }
+    else if (f === 'vision') { r = await ask('What animals are in this picture, and how many?', 40, await toImageData(SAMPLE)); r.ok = /\bcats?\b/i.test(r.text); }
+    else if (f === 'embedding') { r = await compare(); r.ok = r.matrix[0][1] > r.matrix[0][2] + 0.2; }
+    else { const found = await detect(SAMPLE); r = { found, ok: found.filter((o) => o.label === 'cat').length >= 2 }; }
+    window.result = { backend: session.backend, family: f, ...r };
   } catch (e) { window.result = { ok: false, error: e.message }; }
 })();
 </script>
