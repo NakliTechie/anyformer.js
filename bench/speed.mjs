@@ -1,7 +1,8 @@
 // B3, speed, by LocalMind's method (LocalMind scripts/bench-engines.mjs): the prose prompt, 256 new tokens, greedy,
 // 3 runs with run 1 as warm-up, the median of the rest; output tokens counted exactly, in the page, with the model's
 // own tokenizer.json (special tokens excluded). Each row measures LocalMind direct and anyformer back to back on the
-// same origin, profile and engine, so the gap is anyformer's overhead. Close other GPU work first.
+// same origin, profile and engine, so the gap is anyformer's overhead. Rows alternate which side goes first: the second
+// side meets a warmer machine (2026-10-10: Bonsai 2 27B's second side sagged 25.1 → 20.7 tok/s). Close other GPU work first.
 //   node bench/speed.mjs [--rows key,key] [--runs 3] [--n 256] [--out file]
 import { writeFileSync } from 'node:fs';
 import { ROWS, serve, browser, localmindReply, anyformerReply } from './parity.mjs';
@@ -46,13 +47,14 @@ for (const port of [...new Set(rows.map((r) => r.port))]) {
   const b = await browser(port, group[0].profile);
   for (const r of group) {
     try {
-      const lm = await localmindReply(b, port, r.key, PROMPT, N, RUNS);
-      const lmS = summarize(lm, await count(b, r.key, lm.map((x) => x.text)));
-      log(`${r.key}: LocalMind ${lmS.tokPerSec} tok/s`);
-      const af = await anyformerReply(b, port, r, PROMPT, N, RUNS);
-      const afS = summarize(af, await count(b, r.key, af.map((x) => x.text)));
-      log(`${r.key}: anyformer ${afS.tokPerSec} tok/s`);
-      results.push({ key: r.key, repo: r.repo, localmind: lmS, anyformer: afS, ratio: +(afS.tokPerSec / lmS.tokPerSec).toFixed(3) });
+      const sides = {
+        localmind: async () => { const x = await localmindReply(b, port, r.key, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
+        anyformer: async () => { const x = await anyformerReply(b, port, r, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
+      };
+      const order = results.length % 2 ? ['anyformer', 'localmind'] : ['localmind', 'anyformer'];
+      const got = {};
+      for (const side of order) { got[side] = await sides[side](); log(`${r.key}: ${side} ${got[side].tokPerSec} tok/s`); }
+      results.push({ key: r.key, repo: r.repo, first: order[0], localmind: got.localmind, anyformer: got.anyformer, ratio: +(got.anyformer.tokPerSec / got.localmind.tokPerSec).toFixed(3) });
     } catch (e) {
       results.push({ key: r.key, repo: r.repo, error: String(e.message || e).slice(0, 300) });
       log(`${r.key}: ERROR ${e.message}`);

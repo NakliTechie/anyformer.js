@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.." || exit 1
 LOG=${LOG:-/tmp/anyformer-night}
 mkdir -p "$LOG"
 sh bench/wait-quiet.sh "${WAIT:-100}" >> "$LOG/quiet.log" || exit 3
-OUT=plan/bench/$(TZ=Asia/Kolkata date +%F)-speed-quiet.json
+OUT=plan/bench/$(TZ=Asia/Kolkata date +%F-%H%M)-speed.json   # the time keeps two runs on one day apart
 ( while :; do echo "$(TZ=Asia/Kolkata date +%H:%M:%S) $(ioreg -r -d 1 -c IOAccelerator | grep -o '"Device Utilization %"=[0-9]*' | head -1) rsync=$(pgrep -x rsync | wc -l | tr -d ' ')"; sleep 30; done ) > "$LOG/gpu-b3.log" 2>&1 &
 SAMPLER=$!
 node bench/speed.mjs --runs 3 --n 256 --out "$OUT" > "$LOG/b3.out" 2>&1
