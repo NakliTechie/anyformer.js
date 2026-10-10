@@ -3,7 +3,7 @@
 // own tokenizer.json (special tokens excluded). Each row measures LocalMind direct and anyformer back to back on the
 // same origin, profile and engine, so the gap is anyformer's overhead. Rows alternate which side goes first: the second
 // side meets a warmer machine (2026-10-10: Bonsai 2 27B's second side sagged 25.1 → 20.7 tok/s). Close other GPU work first.
-//   node bench/speed.mjs [--rows key,key] [--runs 3] [--n 256] [--out file]
+//   node bench/speed.mjs [--rows key,key] [--runs 3] [--n 256] [--out file] [--flip]
 import { writeFileSync } from 'node:fs';
 import { ROWS, serve, browser, localmindReply, anyformerReply } from './parity.mjs';
 
@@ -51,7 +51,9 @@ for (const port of [...new Set(rows.map((r) => r.port))]) {
         localmind: async () => { const x = await localmindReply(b, port, r.key, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
         anyformer: async () => { const x = await anyformerReply(b, port, r, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
       };
-      const order = results.length % 2 ? ['anyformer', 'localmind'] : ['localmind', 'anyformer'];
+      // --flip starts the alternation with anyformer, so two passes put every row's sides in both orders.
+      const flip = process.argv.includes('--flip') ? 1 : 0;
+      const order = (results.length + flip) % 2 ? ['anyformer', 'localmind'] : ['localmind', 'anyformer'];
       const got = {};
       for (const side of order) { got[side] = await sides[side](); log(`${r.key}: ${side} ${got[side].tokPerSec} tok/s`); }
       results.push({ key: r.key, repo: r.repo, first: order[0], localmind: got.localmind, anyformer: got.anyformer, ratio: +(got.anyformer.tokPerSec / got.localmind.tokPerSec).toFixed(3) });
