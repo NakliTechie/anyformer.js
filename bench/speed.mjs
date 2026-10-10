@@ -1,8 +1,9 @@
 // B3, speed, by LocalMind's method (LocalMind scripts/bench-engines.mjs): the prose prompt, 256 new tokens, greedy,
 // 3 runs with run 1 as warm-up, the median of the rest; output tokens counted exactly, in the page, with the model's
 // own tokenizer.json (special tokens excluded). Each row measures LocalMind direct and anyformer back to back on the
-// same origin, profile and engine, so the gap is anyformer's overhead. Rows alternate which side goes first: the second
-// side meets a warmer machine (2026-10-10: Bonsai 2 27B's second side sagged 25.1 → 20.7 tok/s). Close other GPU work first.
+// same origin, profile and engine, so the gap is anyformer's overhead. Each side runs in its own Chrome process, started
+// fresh and quit after: in one tab, the first side's page held on past navigation and the second side sagged (2026-10-10:
+// Gemma 4 26B 18.7 tok/s first, 12.5 second). Rows also alternate which side goes first. Close other GPU work first.
 //   node bench/speed.mjs [--rows key,key] [--runs 3] [--n 256] [--out file] [--flip]
 import { writeFileSync } from 'node:fs';
 import { ROWS, serve, browser, localmindReply, anyformerReply } from './parity.mjs';
@@ -44,12 +45,17 @@ const results = [];
 for (const port of [...new Set(rows.map((r) => r.port))]) {
   const group = rows.filter((r) => r.port === port);
   const server = await serve(port);
-  const b = await browser(port, group[0].profile);
   for (const r of group) {
     try {
+      // One Chrome per side: launch, measure, count tokens, quit, and give the GPU a few seconds to settle.
+      const fresh = async (fn) => {
+        const b = await browser(port, group[0].profile);
+        try { const x = await fn(b); return summarize(x, await count(b, r.key, x.map((y) => y.text))); }
+        finally { b.close(); await new Promise((res) => setTimeout(res, 5000)); }
+      };
       const sides = {
-        localmind: async () => { const x = await localmindReply(b, port, r.key, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
-        anyformer: async () => { const x = await anyformerReply(b, port, r, PROMPT, N, RUNS); return summarize(x, await count(b, r.key, x.map((y) => y.text))); },
+        localmind: () => fresh((b) => localmindReply(b, port, r.key, PROMPT, N, RUNS)),
+        anyformer: () => fresh((b) => anyformerReply(b, port, r, PROMPT, N, RUNS)),
       };
       // --flip starts the alternation with anyformer, so two passes put every row's sides in both orders.
       const flip = process.argv.includes('--flip') ? 1 : 0;
@@ -62,7 +68,7 @@ for (const port of [...new Set(rows.map((r) => r.port))]) {
       log(`${r.key}: ERROR ${e.message}`);
     }
   }
-  b.close(); server.close();
+  server.close();
   await new Promise((res) => setTimeout(res, 1500));
 }
 console.table(results.map((r) => ({ key: r.key, 'LocalMind tok/s': r.localmind?.tokPerSec ?? r.error, 'anyformer tok/s': r.anyformer?.tokPerSec, 'anyformer / LocalMind': r.ratio, 'TTFT ms (LM / af)': r.localmind ? `${r.localmind.ttftMs} / ${r.anyformer.ttftMs}` : '' })));
