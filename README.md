@@ -13,11 +13,12 @@ browser storage; no account, no server, no telemetry.
 
 | How | Command |
 |---|---|
-| npm | not yet: `anyformer@0.0.1` is a name placeholder with no code |
+| npm | `npm install anyformer` |
+| CDN | `import { load } from 'https://cdn.jsdelivr.net/npm/anyformer@0.1.0/+esm';` |
 | Copy | `index.js` and `src/`; nothing else is needed |
 
 ```js
-import { load } from './anyformer/index.js';
+import { load } from 'anyformer';
 
 const chat = await load('onnx-community/Qwen2.5-0.5B-Instruct', { budget: 2.5e9, onProgress: console.log });
 for await (const { text } of chat.generate([{ role: 'user', content: 'What does a CPU do?' }], { maxNewTokens: 64 }))
@@ -59,8 +60,8 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 | `wllama` | llama.cpp in WebAssembly: WebGPU when the budget holds the model, the CPU otherwise (no WebGPU needed) | any GGUF up to about 3.6 GB that no engine above covers; files over 2 GB are split into OPFS shards once |
 | `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
 
-kohra and diskformer load from their `main` branches; set `kohraBackend.source` or `diskformerBackend.source` to pin a
-commit. `BACKENDS` lists the back ends `load()` asks by default: each joins after its browser test passes.
+Each runtime loads from an exact version or commit in [src/sources.js](src/sources.js); set a back end's `.source`
+(for example `kohraBackend.source`) to load another copy. `BACKENDS` lists the back ends `load()` asks by default: each joins after its browser test passes.
 
 ## When no back end can run it
 
@@ -109,7 +110,8 @@ npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 repl
 ```
 
 The browser tests fail a reply that is off topic or repeats itself, and `diskformer-chat` fails any reply that differs
-from llama.cpp's by one character. Only Apple silicon (M4 Pro, Chrome) has run them.
+from llama.cpp's by one character. Only Apple silicon (M4 Pro, Chrome) has run them. Not tested yet: audio input blocks, abort mid-reply, speech / classification / depth / segmentation in a browser, any
+machine other than the M4 Pro, and Qwen3.6 35B-A3B (it needs more than that machine's 24 GB).
 
 ## License
 
