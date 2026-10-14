@@ -49,7 +49,7 @@
   #attached { display: flex; align-items: center; gap: 6px; }
   #attached img { max-height: 36px; border-radius: 3px; }
   #status { min-height: 1.4em; }
-  .task[hidden] { display: none; }
+  .task[hidden], #attached[hidden] { display: none; }
   #sim td { text-align: right; } #sim td:first-child { text-align: left; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #detectCanvas { max-width: 100%; height: auto; display: block; margin-top: 8px; border-radius: 4px; }
   @media (max-width: 640px) { #verdicts td:nth-child(4), #verdicts th:nth-child(4) { display: none; } }
