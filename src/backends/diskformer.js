@@ -18,6 +18,15 @@ export const DISKFORMER_MODELS = [
     engine: 'qwen35_moe_ssd.js', Engine: 'Qwen35MoeSsd', minBudget: 4e9,
     speeds: [[4e9, 9.2]],
   },
+  // Qwen3.6's language model with a vision encoder (mmproj, ~1.1 GB, loaded on the first image by ensureVision).
+  // From LocalMind's gate (plan/2026-10-14-minicpm-harness, 4 GiB pool, context 512): ~6.1 GB on the GPU (dense 1.59,
+  // pool 4.29), 14.1 tok/s over short greedy continuations. The smallest working budget is unmeasured; the floor is
+  // Qwen3.6's, the same language-model shape. Only this engine reads its images, and it ranks before diskformer-llama.
+  {
+    repo: 'openbmb/MiniCPM-V-4.7-35B-A3B-gguf', file: 'MiniCPM-V-4_7-35B-A3B-Q4_0.gguf', size: 19714550688,
+    engine: 'qwen35_moe_ssd.js', Engine: 'MiniCpmV47Ssd', minBudget: 4e9,
+    speeds: [[6.1e9, 14.1]],
+  },
   // Two parts, ingested as one file by the engine's splitFetch (engines/ling_moe_ssd.js LING_FLASH, rev 29edce5).
   // Budget and speed from LocalMind's gate (plan/2026-10-22-ling-harness/results.md): 2.51 GB of dense weights on
   // the GPU plus a 4.29 GB expert pool, 5.53 tok/s decode; the OPFS store is 80.7 GB.

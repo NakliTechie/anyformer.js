@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 — 2026-10-23
+
+### Added
+- MiniCPM-V 4.7 35B-A3B (openbmb/MiniCPM-V-4.7-35B-A3B-gguf, Q4_0, 19.7 GB) on the `diskformer` back end, through
+  diskformer's `MiniCpmV47Ssd`: text, and images through `ensureVision()` and `{ type: 'image', rgb, width, height }`
+  blocks. Floor 4 GB (Qwen3.6's; the smallest working budget is unmeasured); 14.1 tok/s over short continuations at a
+  4 GiB pool, ~6.1 GB on the GPU (LocalMind's gate). It ranks before `diskformer-llama`, which has no image path.
+  Not yet run through anyformer in a browser; LocalMind's live check is that check.
+
 ## 0.3.0 — 2026-10-23
 
 What LocalMind's worker uses from its disk-tier engines, so its models can move onto anyformer with nothing lost.

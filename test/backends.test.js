@@ -159,3 +159,16 @@ test('diskformer through load(): token ids, think markers, prime, poolBytes and 
     await assert.rejects(s.prime('x'), /disposed/);
   } finally { diskformerBackend.source = saved; }
 });
+
+test('diskformer: MiniCPM-V 4.7 goes to its hand engine (the only one that reads its images), not the llama.cpp path', async () => {
+  const mini = fromHubInfo({ id: 'openbmb/MiniCPM-V-4.7-35B-A3B-gguf', pipeline_tag: 'image-text-to-text', gguf: { architecture: 'qwen35moe' },
+    siblings: [{ rfilename: 'MiniCPM-V-4_7-35B-A3B-Q4_0.gguf', size: 19714550688 }, { rfilename: 'mmproj-model-f16.gguf', size: 1119575840 }] });
+  const caps = { ...full, memory64: true, jspi: true };
+  for (const budget of [4e9, 7e9]) {
+    const p = await plan(mini.repo, { model: mini, caps, budget });
+    assert.equal(p.chosen, 'diskformer', `budget ${budget}`);
+    assert.ok(p.ranked.includes('diskformer-llama'));      // it could run the text, but ranks after
+  }
+  assert.equal((await plan(mini.repo, { model: mini, caps, budget: 7e9 })).candidates.find((c) => c.backend === 'diskformer').estimate.tokPerSec, 14.1);
+  assert.equal(diskformerBackend.canRun(mini, caps, { budget: 3e9 }).need, 4e9);
+});
