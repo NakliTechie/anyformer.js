@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-10-22
 
 ### Added
 - `diskformer-llama` back end: mixture-of-experts GGUFs through diskformer's llama.cpp path (`diskformer/llama`,
