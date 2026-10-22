@@ -26,16 +26,17 @@ function noBackend(plan) {
 
 // What load() would do, without loading: the descriptor, the caps, and every back end's answer.
 // task: a Hugging Face pipeline task ('text-generation', 'feature-extraction', …); null runs the repo's own.
+// file: a weights file in the repo to load (a GGUF name); null lets each back end pick.
 // repo: a Hub id, or an entry from MODELS (its task and budget apply unless opts set them).
 const entry = (repo, opts) => (typeof repo === 'object' && repo?.repo
   ? [repo.repo, { ...(repo.task && { task: repo.task }), ...(repo.budget && { budget: repo.budget }), ...opts }]
   : [repo, opts]);
 
 export async function plan(repoOrEntry, opts = {}) {
-  let [repo, { budget = DEFAULT_BUDGET, task = null, backends = BACKENDS, caps, model, fetch }] = entry(repoOrEntry, opts);
+  let [repo, { budget = DEFAULT_BUDGET, task = null, file = null, backends = BACKENDS, caps, model, fetch }] = entry(repoOrEntry, opts);
   caps ??= await probe();
   model ??= await describe(repo, fetch ? { fetch } : {});
-  return { model, caps, budget, task, ...(await resolve(model, caps, backends, { budget, task })) };
+  return { model, caps, budget, task, file, ...(await resolve(model, caps, backends, { budget, task, file })) };
 }
 
 export async function load(repoOrEntry, options = {}) {
@@ -47,7 +48,7 @@ export async function load(repoOrEntry, options = {}) {
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, caps: p.caps, maxCtx, dtype, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   return { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p, ...serialize(session) };
 }

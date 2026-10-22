@@ -65,3 +65,17 @@ test('resolver: a diskformer hand engine outranks the llama.cpp path for its mod
   assert.equal((await plan(dense.repo, { model: dense, caps: full, budget: 4e9 })).candidates.find((c) => c.backend === 'diskformer-llama').code, 'model');
   assert.ok(BACKENDS.indexOf(diskformerBackend) < BACKENDS.indexOf(diskformerLlamaBackend));
 });
+
+test('diskformer-llama: prefers the file diskformer checked; a caller can choose another', async () => {
+  const glm = hub('unsloth/GLM-4.7-Flash-GGUF', 'deepseek2', [['GLM-4.7-Flash-Q4_K_M.gguf', 18312339808], ['GLM-4.7-Flash-Q3_K_M.gguf', 14614624608]]);
+  assert.equal(pickGguf(glm).name, 'GLM-4.7-Flash-Q3_K_M.gguf');                 // checked, though Q4_K_M ranks first
+  assert.equal(pickGguf(glm, 'GLM-4.7-Flash-Q4_K_M.gguf').name, 'GLM-4.7-Flash-Q4_K_M.gguf');
+  assert.equal(diskformerLlamaBackend.canRun(glm, full, B).estimate.diskBytes, 14614624608);
+  assert.equal(diskformerLlamaBackend.canRun(glm, full, { ...B, file: 'GLM-4.7-Flash-Q4_K_M.gguf' }).estimate.diskBytes, 18312339808);
+  const r = diskformerLlamaBackend.canRun(glm, full, { ...B, file: 'nope.gguf' });
+  assert.equal(r.code, 'model');
+  assert.match(r.reason, /nope\.gguf is not/);
+  const p = await plan(glm.repo, { model: glm, caps: full, file: 'GLM-4.7-Flash-Q4_K_M.gguf' });
+  assert.equal(p.file, 'GLM-4.7-Flash-Q4_K_M.gguf');
+  assert.equal(p.candidates.find((c) => c.backend === 'diskformer-llama').estimate.diskBytes, 18312339808);
+});

@@ -21,9 +21,24 @@ export const LLAMA_ARCHITECTURES = [
 // Q4_K_M, Q4_0, Q4_1, MXFP4 and Q3_K_M.
 const QUANTS = ['Q4_K_M', 'Q4_0', 'Q4_1', 'MXFP4', 'Q3_K_M', 'Q4_K_S', 'Q5_K_M', 'Q5_K_S', 'Q6_K', 'Q8_0'];
 
-// The GGUF to load: the language model (no mmproj vision tower), one file (no split sets), the preferred quant.
-export function pickGguf(model) {
+// The exact files diskformer checked (ggml/chat.html CATALOG and docs/coverage.md at the pinned commit). When a repo
+// holds one, it is the default: the coverage numbers were measured on that file.
+export const CHECKED_FILES = [
+  'gemma-4-26B_q4_0-it.gguf', 'Qwen3-30B-A3B-Instruct-2507-Q3_K_M.gguf', 'Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf',
+  'Qwen3.6-35B-A3B-UD-Q3_K_M.gguf', 'Qwen3-VL-30B-A3B-Instruct-Q3_K_M.gguf', 'GLM-4.7-Flash-Q3_K_M.gguf',
+  'NVIDIA-Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf', 'ERNIE-4.5-21B-A3B-Thinking-Q4_K_M.gguf', 'gpt-oss-20b-MXFP4.gguf',
+  'North-Mini-Code-1.0-UD-Q3_K_M.gguf', 'LFM2.5-24B-A2B-QAD-Q4_0.gguf', 'LFM2-8B-A1B-Q4_K_M.gguf',
+  'Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf', 'Ling-mini-2.0-Q4_K_M.gguf', 'granite-4.0-h-tiny-Q4_K_M.gguf',
+  'Ling-3.0-tiny-Q4_K_M.gguf', 'flint-int4-q4_1.gguf', 'OLMoE-1B-7B-0125-Instruct-Q4_K_M.gguf',
+];
+
+// The GGUF to load: the language model (no mmproj vision tower), one file (no split sets). The caller's file when
+// given; else the file diskformer checked; else the preferred quant.
+export function pickGguf(model, file = null) {
   const lms = model.files.gguf.filter((f) => !/mmproj/i.test(f.name) && !/-\d{5}-of-\d{5}\.gguf$/.test(f.name));
+  if (file) return lms.find((f) => f.name === file) || null;
+  const checked = lms.find((f) => CHECKED_FILES.includes(f.name.split('/').pop()));
+  if (checked) return checked;
   for (const q of QUANTS) {
     const f = lms.find((x) => new RegExp(`(^|[-_.])${q}([-_.]|$)`, 'i').test(x.name.replace(/\.gguf$/i, '')));
     if (f) return f;
@@ -62,12 +77,12 @@ export const diskformerLlamaBackend = {
   // Where a GGUF downloads from; a test points it at a local server.
   url: (model, file) => `${model.endpoint || 'https://huggingface.co'}/${model.repo}/resolve/${model.revision || 'main'}/${file.name.split('/').map(encodeURIComponent).join('/')}`,
 
-  canRun(model, caps, { budget, task }) {
+  canRun(model, caps, { budget, task, file = null }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
     if (task && !diskformerLlamaBackend.tasks.includes(task)) return { ok: false, code: 'task', reason: `task ${task}; diskformer's llama.cpp path runs text generation only` };
     if (!LLAMA_ARCHITECTURES.includes(model.architecture)) return { ok: false, code: 'model', reason: `architecture ${model.architecture || 'unknown'} is not one diskformer's llama.cpp path has checked (${LLAMA_ARCHITECTURES.join(', ')})` };
-    const f = pickGguf(model);
-    if (!f) return { ok: false, code: 'model', reason: `no single-file GGUF at ${QUANTS.join(', ')} in the repo` };
+    const f = pickGguf(model, file);
+    if (!f) return { ok: false, code: 'model', reason: file ? `${file} is not a single-file language-model GGUF in the repo` : `no single-file GGUF at ${QUANTS.join(', ')} in the repo` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     if (!caps.memory64 || !caps.jspi) return { ok: false, code: 'webgpu', reason: 'the llama.cpp build needs wasm memory64 and JSPI (Chrome or Edge 137+)' };
     if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
@@ -76,8 +91,8 @@ export const diskformerLlamaBackend = {
   },
 
   // maxCtx sizes the KV cache; 1024 is the context diskformer's gates run at.
-  async load(model, { budget, maxCtx = 1024, onProgress, signal }) {
-    const f = pickGguf(model);
+  async load(model, { budget, file = null, maxCtx = 1024, onProgress, signal }) {
+    const f = pickGguf(model, file);
     const { Llama } = await import(diskformerLlamaBackend.source);
     const llama = new Llama();
     const say = (e) => onProgress?.({ backend: 'diskformer-llama', file: f.name, ...e });

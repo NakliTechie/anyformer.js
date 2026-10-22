@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 — 2026-10-23
+
+### Added
+- `load(repo, { file })` and `plan(repo, { file })`: load a chosen GGUF from the repo; a back end that cannot load
+  that file refuses with code `model`.
+
+### Changed
+- `diskformer-llama` loads the file diskformer checked when the repo has it (`CHECKED_FILES`, from diskformer's
+  catalog and coverage table), else the preferred quant. GLM-4.7-Flash now defaults to Q3_K_M (14.6 GB, gated 8/9 by
+  diskformer), not Q4_K_M (18.3 GB, not gated). Granite 4.0 H Tiny and Gemma 4 26B keep the files their gates used.
+
 ## 0.2.1 — 2026-10-23
 
 ### Changed

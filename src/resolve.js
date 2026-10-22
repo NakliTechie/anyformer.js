@@ -3,7 +3,8 @@
 // Back-end contract (each back end is a plain object):
 //   id        string, stable, e.g. 'diskformer'
 //   tasks     the Hugging Face pipeline tasks it runs, e.g. ['text-generation']
-//   canRun(model, caps, { budget, task }) → { ok: true, estimate } | { ok: false, code, reason, need? }
+//   canRun(model, caps, { budget, task, file }) → { ok: true, estimate } | { ok: false, code, reason, need? }
+//             file: a weights file the caller chose (a GGUF name); a back end that cannot load that file refuses.
 //             estimate = { gpuBytes, diskBytes, tokPerSec | null }. No network, no GPU allocation: it reads the
 //             descriptor and caps only. code is one of REFUSALS below; need is the budget that would pass, with
 //             code 'budget'. A throw counts as code 'threw' with the message as the reason.
@@ -26,11 +27,11 @@ export const REFUSALS = {
   threw: 'the back end crashed deciding; a bug in that back end, report it with the reason',
 };
 
-export async function resolve(model, caps, backends, { budget, task = null } = {}) {
+export async function resolve(model, caps, backends, { budget, task = null, file = null } = {}) {
   const candidates = [];
   for (const [order, b] of backends.entries()) {
     let r;
-    try { r = await b.canRun(model, caps, { budget, task }); } catch (e) { r = { ok: false, code: 'threw', reason: `canRun threw: ${e.message}` }; }
+    try { r = await b.canRun(model, caps, { budget, task, file }); } catch (e) { r = { ok: false, code: 'threw', reason: `canRun threw: ${e.message}` }; }
     candidates.push(r.ok ? { backend: b.id, order, ok: true, estimate: r.estimate } : { backend: b.id, order, ok: false, code: r.code || 'model', reason: r.reason, ...(r.need && { need: r.need }) });
   }
   const ranked = candidates.filter((c) => c.ok).sort(rank);
