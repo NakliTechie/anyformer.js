@@ -107,14 +107,16 @@ export const diskformerLlamaBackend = {
       task: 'text-generation',
       llama,
       info,
-      async *generate(messages, { maxNewTokens = 512, signal } = {}) {
+      // thinking: false (the default, as the other engines here) renders the template with thinking off, so a model that
+      // reasons first answers directly; true lets it think.
+      async *generate(messages, { maxNewTokens = 512, signal, thinking = false } = {}) {
         const chunks = [];
         let wake = null, finished = false, failed = null, result = null, text = '', tokens = 0;
         const nudge = () => { wake?.(); wake = null; };
         const abort = () => llama.abort();
         signal?.addEventListener('abort', abort, { once: true });
         const job = llama.chat(textOnly(messages), {
-          n: maxNewTokens,
+          n: maxNewTokens, thinking,
           onPiece: (s) => { text += s; tokens++; chunks.push({ text, tokens }); nudge(); },
         }).then((r) => { result = r; }, (e) => { failed = e; }).finally(() => { finished = true; nudge(); });
         try {

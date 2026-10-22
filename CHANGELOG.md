@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1 — 2026-10-23
+
+### Changed
+- diskformer pinned to v0.6.1 (5bccf32): its llama.cpp build takes a thinking switch. `diskformer-llama`'s
+  `generate()` now turns thinking off by default (`thinking: true` turns it on), so a model that reasons first answers
+  directly, as on the other back ends.
+
+### Measured (Chrome, M4 Pro; correctness only)
+- Granite 4.0 H Tiny via `diskformer-llama`: 9/9; the chat path matches the reference.
+- Gemma 4 26B-A4B via `diskformer-llama`: 8/9 (miss: system-pirate, as diskformer's own run); the chat path matches the
+  reference, with no thought block. The hand engines are unchanged in v0.6.1, so their 9/9 at 0.2.0 stands.
+
 ## 0.2.0 — 2026-10-22
 
 ### Added
@@ -21,7 +33,7 @@
 
 ### Known gaps
 - `diskformer-llama`'s chat path does not turn thinking off: a model that reasons first (Gemma 4, Qwen3.6, gpt-oss)
-  begins its reply with its thought block. Waiting on a thinking switch in diskformer's chat.
+  begins its reply with its thought block. Closed in 0.2.1.
 
 ## 0.1.0 — 2026-10-14
 

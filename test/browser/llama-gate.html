@@ -3,7 +3,7 @@
      (?refs=<fixture name>, copied from diskformer.js examples/chat/refs/) as a formatted prompt continued greedily, the way
      diskformer's ggml/gate.html does, and require diskformer's own Chrome result: ?want=<identical count>, ?miss=<names
      diskformer misses too>. Also checks that anyformer's resolver sends the repo here, and one reply through the chat
-     path. ?repo=<Hub id> · ?budget=<GB> · ?local=1 downloads the GGUF from run.mjs's --models folder, not Hugging Face. -->
+     path (?chat=1 requires it to equal the reference). ?repo=<Hub id> · ?budget=<GB> · ?local=1 downloads the GGUF from run.mjs's --models folder, not Hugging Face. -->
 <script type="module">
 import { plan, describe, diskformerLlamaBackend } from '../../index.js';
 import { pickGguf } from '../../src/backends/diskformer-llama.js';
@@ -67,7 +67,7 @@ run('llama-gate', async () => {
   const want = Number(q.get('want') || ref.conversations.length);
   const speeds = rows.map((r) => r.tokPerSec).sort((a, b) => a - b);
   return {
-    ok: identical >= want && misses.every((m) => allowed.includes(m)) && chatText.length > 0,
+    ok: identical >= want && misses.every((m) => allowed.includes(m)) && chatText.length > 0 && (!q.get('chat') || chatMatchesRef),
     repo, budget, chosen: p.chosen, identical, of: rows.length, want, misses, loadSeconds,
     medianTokPerSec: speeds[speeds.length >> 1], chatMatchesRef, chatText: chatMatchesRef ? undefined : chatText, rows,
   };
