@@ -10,10 +10,13 @@
 //                   system-prompt snapshot).
 //   OPFS            'localmind-ssd/<key>/' (diskformer's MoE stores, Gemma 4's PLE table) with manifest.json naming the
 //                   source; 'cache/' (wllama: '__metadata__<name>' names each file's URL); 'anyformer-gguf/<key>/'
-//                   (GGUFs over 2 GB as shards, meta.json or done.json naming the repo; src/gguf-split.js).
+//                   (GGUFs over 2 GB as shards, meta.json or done.json naming the repo; src/gguf-split.js);
+//                   'gguf/<name>' (diskformer-llama: llama.cpp's GGUFs, with <name>.part and .part.json while downloading;
+//                   anyformer-llama.json maps each name to its repo).
 
 import { DISKFORMER_MODELS } from './backends/diskformer.js';
 import { SPLIT_ROOT } from './gguf-split.js';
+import { readLlamaIndex, LLAMA_INDEX } from './backends/diskformer-llama.js';
 
 const CACHE_BACKEND = { 'transformers-cache': 'transformers', 'gguf-v1': 'localmind', 'gguf-v1-headers': 'localmind', 'bonsai-pipeline-v1': 'localmind' };
 const IDB_STORES = ['gguf-cache-v1', 'safetensors-cache-v1'];
@@ -102,6 +105,22 @@ async function inventory() {
     if (h.kind !== 'directory') continue;
     const repo = (await readJson(h, 'meta.json'))?.repo || (await readJson(h, 'done.json'))?.repo;
     add('wllama', repo, await dirBytes(h), () => split.removeEntry(key, { recursive: true }));
+  }
+  const llama = await opfsDir(['gguf']);
+  if (llama) {
+    const index = await readLlamaIndex();
+    for await (const [name, h] of llama.entries()) {
+      if (h.kind !== 'file' || name.endsWith('.part.json') || name.endsWith('.crswap')) continue;
+      const base = name.replace(/\.part$/, '');
+      add('diskformer-llama', index[base], (await h.getFile()).size, async () => {
+        for (const n of [base, `${base}.part`, `${base}.part.json`]) await llama.removeEntry(n).catch(() => {});
+        const rest = await readLlamaIndex();
+        delete rest[base];
+        const w = await (await (await navigator.storage.getDirectory()).getFileHandle(LLAMA_INDEX, { create: true })).createWritable();
+        await w.write(JSON.stringify(rest));
+        await w.close();
+      });
+    }
   }
   return out;
 }

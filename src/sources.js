@@ -7,7 +7,7 @@ export const PINS = {
   transformers: '4.3.1',
   wllama: '3.4.1',      // LocalMind's pin; its stream-drain workaround (src/backends/wllama.js) is for this version
   kohra: 'f678fac7342c79b58b640540b8b3a7d078b7ab1a',
-  diskformer: '524bc50e2edd186403403090dd83d13f66a8f73f',
+  diskformer: '439ad4e81d9e6362cfb2bd94bcd2d6ad9f9cd11c',   // v0.6.0: engines/ and ggml/ (the llama.cpp path)
   localmind: '203288a0f0e23919b43c76bff8dc5d49f48ed300',
 };
 
@@ -18,5 +18,6 @@ export const SOURCES = {
   wllama: `https://cdn.jsdelivr.net/npm/@wllama/wllama@${PINS.wllama}/esm`,
   kohra: gh('kohra', PINS.kohra, 'kohra.js'),
   diskformer: gh('diskformer.js', PINS.diskformer, 'engines'),
+  diskformerLlama: gh('diskformer.js', PINS.diskformer, 'ggml/llama.js'),
   localmind: gh('LocalMind', PINS.localmind, 'src'),
 };

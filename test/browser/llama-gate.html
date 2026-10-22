@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8"><title>llama-gate</title>
+<!-- diskformer's llama.cpp-path gate, through anyformer's diskformer-llama back end: replay llama.cpp's replies
+     (?refs=<fixture name>, copied from diskformer.js examples/chat/refs/) as a formatted prompt continued greedily, the way
+     diskformer's ggml/gate.html does, and require diskformer's own Chrome result: ?want=<identical count>, ?miss=<names
+     diskformer misses too>. Also checks that anyformer's resolver sends the repo here, and one reply through the chat
+     path. ?repo=<Hub id> · ?budget=<GB> · ?local=1 downloads the GGUF from run.mjs's --models folder, not Hugging Face. -->
+<script type="module">
+import { plan, describe, diskformerLlamaBackend } from '../../index.js';
+import { pickGguf } from '../../src/backends/diskformer-llama.js';
+import { run, log } from './harness.js';
+const q = new URLSearchParams(location.search);
+const budget = Number(q.get('budget') || 3) * 1e9;
+if (q.get('local')) diskformerLlamaBackend.url = (model, f) => `${location.origin}/models/${f.name}`;
+// The reply after the prompt: llama-server's content may begin with text the prompt already ends with.
+const expected = (prompt, content) => {
+  for (let k = Math.min(prompt.length, content.length); k > 0; k--) if (prompt.endsWith(content.slice(0, k))) return content.slice(k);
+  return content;
+};
+run('llama-gate', async () => {
+  const repo = q.get('repo');
+  const ref = await (await fetch(`../fixtures/${q.get('refs')}.json`)).json();
+  const model = await describe(repo);
+  const p = await plan(model.repo, { model, budget });
+  const routed = p.candidates.find((c) => c.backend === 'diskformer-llama');
+  log(`resolver: ${p.chosen} chosen; diskformer-llama ${routed.ok ? 'can run it' : `refused: ${routed.reason}`}`);
+  if (!routed.ok) return { ok: false, chosen: p.chosen, refused: routed };
+  // ?copyOnly=1: put the GGUF into OPFS and stop, without the GPU (a long copy can run while another session gates).
+  if (q.get('copyOnly')) {
+    const f = pickGguf(model);
+    const { Llama } = await import(diskformerLlamaBackend.source);
+    const l = new Llama();
+    let at = 0;
+    await l.download({ url: diskformerLlamaBackend.url(model, f), name: f.name, size: f.size },
+      (d) => { if (Date.now() - at > 15000) { at = Date.now(); log(`copy ${(d.copied / 1e9).toFixed(2)} of ${(d.total / 1e9).toFixed(2)} GB`); } });
+    const stored = (await l.list()).find((m) => m.name === f.name);
+    l.terminate();
+    return { ok: stored?.size === f.size && !stored.partial, copied: f.name, bytes: stored?.size };
+  }
+  const t0 = performance.now();
+  let lastAt = 0;
+  const s = await diskformerLlamaBackend.load(model, {
+    budget,
+    onProgress: (e) => {
+      if (Date.now() - lastAt < 5000 && e.status === 'download') return;
+      lastAt = Date.now();
+      log(`${e.status}${e.total ? ` ${(e.loaded / 1e9).toFixed(2)} of ${(e.total / 1e9).toFixed(2)} GB` : ''}${e.slots ? ` slots ${e.slots}` : ''}`);
+    },
+  });
+  const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
+  const rows = [];
+  for (const c of ref.conversations) {
+    log(`gate: ${c.name} (${rows.length + 1} of ${ref.conversations.length})`);
+    const want = expected(c.prompt, c.content);
+    const r = await s.complete(c.prompt, { maxNewTokens: c.tokens });
+    const tps = r.stats.decode_tokens / (r.stats.decode_ms / 1000);
+    rows.push({ name: c.name, identical: r.text === want, tokPerSec: +tps.toFixed(2), ...(r.text === want ? {} : { ours: r.text, theirs: want }) });
+  }
+  // The chat path (the model's template applied by llama.cpp), on the first conversation: reported, not gated.
+  const c0 = ref.conversations[0];
+  let chatText = '';
+  for await (const c of s.generate(c0.messages, { maxNewTokens: c0.tokens })) chatText = c.text;
+  const chatMatchesRef = chatText === expected(c0.prompt, c0.content);
+  await s.dispose();
+  const identical = rows.filter((r) => r.identical).length;
+  const misses = rows.filter((r) => !r.identical).map((r) => r.name);
+  const allowed = (q.get('miss') || '').split(',').filter(Boolean);
+  const want = Number(q.get('want') || ref.conversations.length);
+  const speeds = rows.map((r) => r.tokPerSec).sort((a, b) => a - b);
+  return {
+    ok: identical >= want && misses.every((m) => allowed.includes(m)) && chatText.length > 0,
+    repo, budget, chosen: p.chosen, identical, of: rows.length, want, misses, loadSeconds,
+    medianTokPerSec: speeds[speeds.length >> 1], chatMatchesRef, chatText: chatMatchesRef ? undefined : chatText, rows,
+  };
+});
+</script>

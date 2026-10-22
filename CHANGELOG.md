@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `diskformer-llama` back end: mixture-of-experts GGUFs through diskformer's llama.cpp path (`diskformer/llama`,
+  llama.cpp with WebGPU in a worker, experts paged from OPFS), for the 17 architectures diskformer has checked
+  (`LLAMA_ARCHITECTURES`). A diskformer hand-written engine still ranks first where it covers the model.
+- `probe()` reports `jspi` (WebAssembly JSPI), which the llama.cpp build needs.
+- `stored()` and `remove()` cover the llama.cpp path's GGUFs in OPFS (`gguf/`).
+
+### Changed
+- diskformer pinned to v0.6.0 (439ad4e) for both its hand engines and the llama.cpp path.
+
+### Measured (Chrome, M4 Pro)
+- Granite 4.0 H Tiny through `diskformer-llama`: 9/9 replies identical to diskformer's reference
+  (`npm run test:browser -- llama-gate`).
+- Gemma 4 26B-A4B through `diskformer-llama`: 8/9 identical to llama.cpp b9830, the same 8/9 (miss: system-pirate)
+  diskformer records for its own Chrome run. The resolver still sends this repo to the hand engine.
+- Gemma 4 26B-A4B on the hand engine at the new pin: 9/9 identical (`diskformer-chat`).
+
+### Known gaps
+- `diskformer-llama`'s chat path does not turn thinking off: a model that reasons first (Gemma 4, Qwen3.6, gpt-oss)
+  begins its reply with its thought block. Waiting on a thinking switch in diskformer's chat.
+
 ## 0.1.0 — 2026-10-14
 
 The first release with code. `anyformer@0.0.1` reserved the name and held none.

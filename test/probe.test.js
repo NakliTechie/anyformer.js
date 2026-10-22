@@ -12,11 +12,12 @@ const fakeGpu = (features, info = {}) => ({
 
 test('no WebGPU, no storage: every field has its safe default', async () => {
   const caps = await probe({ gpu: undefined, storage: undefined });
-  assert.deepEqual({ ...caps, memory64: undefined }, {
+  assert.deepEqual({ ...caps, memory64: undefined, jspi: undefined }, {
     webgpu: false, f16: false, subgroups: false, maxBufferSize: 0, maxStorageBufferBindingSize: 0, adapter: null,
-    opfs: false, quotaBytes: 0, usageBytes: 0, memory64: undefined,
+    opfs: false, quotaBytes: 0, usageBytes: 0, memory64: undefined, jspi: undefined,
   });
   assert.equal(typeof caps.memory64, 'boolean');
+  assert.equal(typeof caps.jspi, 'boolean');
 });
 
 test('adapter features, limits and info are read', async () => {

@@ -40,6 +40,8 @@ export const diskformerBackend = {
   // Gemma 4's repo is tagged image-text-to-text; the engines run its text turns.
   tasks: ['text-generation', 'image-text-to-text'],
   source: SOURCES.diskformer,
+  // Where the engine downloads its GGUF from; null is Hugging Face. A test points it at a local server.
+  url: null,
 
   canRun(model, caps, { budget, task }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
@@ -64,6 +66,7 @@ export const diskformerBackend = {
       engine = await mod[m.Engine].load(null, {
         // The engines' own default root, named so the store module (src/store.js) lists the same folder.
         gpuBudgetBytes: budget, maxCtx, signal, root: 'localmind-ssd',
+        ...(diskformerBackend.url && { url: diskformerBackend.url(model, m) }),
         onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
       });
     } catch (e) { throw budgetError(e) || e; }

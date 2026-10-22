@@ -59,6 +59,7 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 | `localmind` | LocalMind's hand-written WebGPU kernels, the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
 | `wllama` | llama.cpp in WebAssembly: WebGPU when the budget holds the model, the CPU otherwise (no WebGPU needed) | any GGUF up to about 3.6 GB that no engine above covers; files over 2 GB are split into OPFS shards once |
 | `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB) |
+| `diskformer-llama` | diskformer's llama.cpp build with WebGPU, mixture-of-experts layers paged in from OPFS | GGUFs of the 17 MoE architectures diskformer has checked (Granite 4.0 H, gpt-oss, GLM-4.7-Flash, LFM2 MoE…); a hand engine above wins where it covers the model |
 
 Each runtime loads from an exact version or commit in [src/sources.js](src/sources.js); set a back end's `.source`
 (for example `kohraBackend.source`) to load another copy. `BACKENDS` lists the back ends `load()` asks by default: each joins after its browser test passes.
@@ -66,8 +67,7 @@ Each runtime loads from an exact version or commit in [src/sources.js](src/sourc
 ## When no back end can run it
 
 `load()` throws an `AnyformerError` with code `NO_BACKEND` and the plan, naming each back end, its code and its
-reason. Codes are a closed set, each with one
-remedy in `REFUSALS`: `format`, `model`, `task`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
+reason. Codes are a closed set, each with one remedy in `REFUSALS`: `format`, `model`, `task`, `webgpu`, `f16`, `opfs`, `budget` (with `need`, the budget that would pass)
 and `threw`. Every other failure is an `AnyformerError` too, with a code from `ERROR_CODES` (`LOAD_FAILED`,
 `BUDGET_TOO_SMALL`, `ABORTED`, `EXECUTION_FAILED`, `INVALID_ARGUMENT`, `DISPOSED`); check it with
 `isAnyformerError(e, code)`. A session runs one `generate()` at a time, in call order.
@@ -107,6 +107,7 @@ npm run test:browser -- store             # list a download, remove it
 npm run test:browser -- chat --query "repo=LiquidAI/LFM2.5-1.2B-Instruct-GGUF"   # a LocalMind engine
 npm run test:browser -- vision --query "repo=onnx-community/Qwen3.5-4B-ONNX-OPT"   # names the two cats
 npm run test:browser -- diskformer-chat    # Gemma 4 26B-A4B at 2.5 GB: 9/9 replies identical to llama.cpp b9830
+npm run test:browser -- llama-gate --query "repo=ibm-granite/granite-4.0-h-tiny-GGUF&refs=diskformer-granite-refs"   # 9/9 via diskformer-llama
 ```
 
 The browser tests fail a reply that is off topic or repeats itself, and `diskformer-chat` fails any reply that differs

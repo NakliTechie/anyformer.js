@@ -1,5 +1,5 @@
 // Runs one test page in headless Chrome and prints window.result; exit 0 pass, 1 fail, 2 timeout.
-//   node test/browser/run.mjs <page> [--port N] [--profile dir] [--minutes N] [--budget GB] [--query a=b&c=d]
+//   node test/browser/run.mjs <page> [--port N] [--profile dir] [--minutes N] [--budget GB] [--query a=b&c=d] [--models dir,…]
 // <page> is a test page name (test/browser/<page>.html) or a path from the repo root (examples/chat/index.html).
 // kohra, diskformer and LocalMind load at the commits src/sources.js pins; --main loads each repo's current main commit
 // instead (looked up on GitHub, so jsDelivr's cached @main never answers), to test a pin move before making it.
@@ -8,7 +8,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, stat, mkdtemp } from 'node:fs/promises';
-import { rmSync } from 'node:fs';
+import { rmSync, createReadStream } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, extname, normalize, sep } from 'node:path';
@@ -22,9 +22,25 @@ const chat = name === 'diskformer-chat';
 const root = realpathSync(new URL('../..', import.meta.url).pathname);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json' };
 
+// --models <dir>[,<dir>…]: serve the GGUFs in those folders at /models/<file name>, with Range requests, so a test can
+// copy a model into OPFS from this disk instead of Hugging Face (llama-gate's ?local=1).
+const modelDirs = (arg('models') || '').split(',').filter(Boolean);
+async function serveModel(req, res, file) {
+  let p = null;
+  for (const d of modelDirs) { const c = join(d, file); if (!file.includes('/') && await stat(c).then((s) => s.isFile(), () => false)) { p = c; break; } }
+  if (!p) { res.writeHead(404).end(); return; }
+  const size = (await stat(p)).size;
+  const m = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+  const start = m ? +m[1] : 0, end = m && m[2] ? Math.min(+m[2], size - 1) : size - 1;
+  res.writeHead(m ? 206 : 200, { 'Content-Type': 'application/octet-stream', 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1,
+    ...(m && { 'Content-Range': `bytes ${start}-${end}/${size}` }) });
+  createReadStream(p, { start, end }).pipe(res);
+}
+
 const server = createServer(async (req, res) => {
   try {
     const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
+    if (path.startsWith('/models/') && modelDirs.length) { await serveModel(req, res, path.slice('/models/'.length)); return; }
     const p = join(root, path);
     if (!p.startsWith(root + sep) || !(await stat(p)).isFile()) { res.writeHead(404).end(); return; }
     res.writeHead(200, { 'Content-Type': types[extname(p)] || 'application/octet-stream' }).end(await readFile(p));

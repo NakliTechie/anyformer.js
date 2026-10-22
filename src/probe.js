@@ -14,6 +14,8 @@ export async function probe({ gpu = globalThis.navigator?.gpu, storage = globalT
     maxBufferSize: 0, maxStorageBufferBindingSize: 0, adapter: null,
     opfs: false, quotaBytes: 0, usageBytes: 0,
     memory64: memory64(),
+    // JSPI: wasm that suspends on a promise (diskformer's llama.cpp build reads experts from OPFS this way).
+    jspi: typeof globalThis.WebAssembly?.Suspending === 'function',
   };
   const adapter = gpu ? await gpu.requestAdapter({ powerPreference: 'high-performance' }).catch(() => null) : null;
   if (adapter) {

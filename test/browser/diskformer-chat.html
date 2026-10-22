@@ -4,7 +4,10 @@
 <script type="module">
 import { load, diskformerBackend } from '../../index.js';
 import { run, log, reply } from './harness.js';
-const budget = Number(new URLSearchParams(location.search).get('budget') || 2.5) * 1e9;
+const q = new URLSearchParams(location.search);
+const budget = Number(q.get('budget') || 2.5) * 1e9;
+// ?local=1: the engine reads the GGUF from run.mjs's --models folder instead of Hugging Face.
+if (q.get('local')) diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
 run('diskformer-chat', async () => {
   const ref = await (await fetch('../fixtures/diskformer-gemma-chat-refs.json')).json();
   let lastAt = 0;
