@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 — 2026-10-23
+
+### Changed
+- The `diskformer` back end's `generate()` honours `thinking`, as `diskformer-llama` does since 0.2.1: off by default,
+  `{ thinking: true }` lets Gemma 4, Qwen3.6 or Ling 3.0 Flash reason first (the engines' `enableThinking`).
+
 ## 0.2.3 — 2026-10-23
 
 ### Added

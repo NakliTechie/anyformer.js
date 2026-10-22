@@ -121,3 +121,15 @@ test('diskformer: Ling 3.0 Flash needs both parts at their sizes and a 6.8 GB bu
   assert.equal(p.chosen, 'diskformer');
   assert.equal(p.candidates.find((c) => c.backend === 'diskformer-llama').code, 'model');
 });
+
+test('diskformer: generate() turns thinking off by default and on with { thinking: true }', async () => {
+  const saved = diskformerBackend.source;
+  diskformerBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  try {
+    const { calls } = await import('./fixtures/fake-engines/gemma4_moe_ssd.js');
+    const s = await diskformerBackend.load(gemma, { budget: 2.5e9 });
+    for await (const _ of s.generate([{ role: 'user', content: 'hi' }])) { /* drain */ }
+    for await (const _ of s.generate([{ role: 'user', content: 'hi' }], { thinking: true })) { /* drain */ }
+    assert.deepEqual(calls.map((o) => o.enableThinking), [false, true]);
+  } finally { diskformerBackend.source = saved; }
+});

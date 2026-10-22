@@ -87,8 +87,10 @@ export const diskformerBackend = {
     return {
       task: 'text-generation',
       engine,
-      async *generate(messages, { maxNewTokens = 512, signal } = {}) {
-        for await (const r of engine.generate(messages, { maxNewTokens, signal, enableThinking: false }))
+      // thinking: false (the default, as on every back end here) answers directly; true lets a model that reasons
+      // (Gemma 4, Qwen3.6, Ling) think first.
+      async *generate(messages, { maxNewTokens = 512, signal, thinking = false } = {}) {
+        for await (const r of engine.generate(messages, { maxNewTokens, signal, enableThinking: thinking === true }))
           yield { text: r.text, tokens: r.tokens };
       },
       dispose: () => engine.dispose(),
