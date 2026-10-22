@@ -7,7 +7,7 @@ export const PINS = {
   transformers: '4.3.1',
   wllama: '3.4.1',      // LocalMind's pin; its stream-drain workaround (src/backends/wllama.js) is for this version
   kohra: 'f678fac7342c79b58b640540b8b3a7d078b7ab1a',
-  diskformer: 'f5f1177d40521d485a0e88a3fa3cbc69b16a998f',   // v0.6.2: engines/ (with Ling 3.0 Flash) and ggml/ (the llama.cpp path)
+  diskformer: '1d8b418775179d8573f9dd26edd14e6d9bcc2516',   // v0.6.3: engines/ (with Ling 3.0 Flash) and ggml/ (the llama.cpp path)
   localmind: '203288a0f0e23919b43c76bff8dc5d49f48ed300',
 };
 

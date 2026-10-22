@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5 — 2026-10-23
+
+### Changed
+- diskformer pinned to v0.6.3 (1d8b418): Ling 3.0 Flash loads a complete store without reading the parts' headers
+  from Hugging Face; the browser llama.cpp build is rebuilt (split GGUFs still refused there). Granite 4.0 H Tiny
+  through `diskformer-llama` on the new build: 9/9, chat path = reference. The hand engines anyformer gated are
+  unchanged (`qwen3_moe_ssd.js` only adds an export).
+
 ## 0.2.4 — 2026-10-23
 
 ### Changed
