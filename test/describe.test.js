@@ -59,3 +59,20 @@ test('describe() builds the Hub URL, pins a revision, and reports HTTP errors', 
   const notFound = async () => ({ ok: false, status: 404 });
   await assert.rejects(describe('a/missing', { fetch: notFound }), /returned 404/);
 });
+
+test('describe() keeps the last Hub answer and falls back to it offline; a 404 with nothing cached still throws', async () => {
+  const stores = new Map();
+  const caches = { open: async (name) => {
+    if (!stores.has(name)) stores.set(name, new Map());
+    const m = stores.get(name);
+    return { put: async (url, res) => m.set(url, await res.text()), match: async (url) => (m.has(url) ? new Response(m.get(url)) : undefined) };
+  } };
+  const online = async () => new Response(JSON.stringify(gemma));
+  const offline = async () => { throw new TypeError('Failed to fetch'); };
+  const repo = 'google/gemma-4-26B-A4B-it-qat-q4_0-gguf';
+  assert.equal((await describe(repo, { fetch: online, caches })).architecture, 'gemma4');
+  assert.equal((await describe(repo, { fetch: offline, caches })).architecture, 'gemma4');     // from the cache
+  await assert.rejects(describe('a/never-seen', { fetch: offline, caches }), /failed: Failed to fetch/);
+  await assert.rejects(describe('a/missing', { fetch: async () => new Response('', { status: 404 }), caches }), /returned 404/);
+  await assert.rejects(describe(repo, { fetch: offline, caches: null }), /failed: Failed to fetch/);   // no Cache Storage (Node)
+});

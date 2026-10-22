@@ -102,3 +102,22 @@ test('transformers multimodal: gemma4 and qwen3_5 repos run as chat at q4f16, ev
   assert.equal(tight.code, 'budget');
   assert.ok(tight.need > 3e9);
 });
+
+test('diskformer: Ling 3.0 Flash needs both parts at their sizes and a 6.8 GB budget; the store size is its disk bytes', async () => {
+  const P1 = 'Q4_K_M/Ling-3.0-flash-Q4_K_M-00001-of-00002.gguf', P2 = 'Q4_K_M/Ling-3.0-flash-Q4_K_M-00002-of-00002.gguf';
+  const ling = (files) => fromHubInfo({ id: 'inclusionAI/Ling-3.0-flash-GGUF', gguf: { architecture: 'bailingmoe3' }, siblings: files.map(([rfilename, size]) => ({ rfilename, size })) });
+  const both = ling([[P1, 49995534208], [P2, 27014610464]]);
+  const caps = { ...full, memory64: true, jspi: true };
+  const r = diskformerBackend.canRun(both, caps, { budget: 7e9 });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.estimate, { gpuBytes: 7e9, diskBytes: 80.7e9, tokPerSec: 5.53 });
+  const small = diskformerBackend.canRun(both, caps, { budget: 4e9 });
+  assert.equal(small.code, 'budget');
+  assert.equal(small.need, 6.8e9);
+  assert.equal(diskformerBackend.canRun(ling([[P1, 49995534208]]), caps, { budget: 7e9 }).code, 'model');
+  assert.equal(diskformerBackend.canRun(ling([[P1, 49995534208], [P2, 1]]), caps, { budget: 7e9 }).code, 'model');
+  // The default back ends: the hand engine; the llama.cpp path refuses a split set.
+  const p = await plan(both.repo, { model: both, caps, budget: 7e9 });
+  assert.equal(p.chosen, 'diskformer');
+  assert.equal(p.candidates.find((c) => c.backend === 'diskformer-llama').code, 'model');
+});

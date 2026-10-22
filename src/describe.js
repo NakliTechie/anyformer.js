@@ -3,11 +3,24 @@
 
 const HF = 'https://huggingface.co';
 
-export async function describe(repo, { fetch = globalThis.fetch, revision = 'main', endpoint = HF } = {}) {
+// The last answer the Hub gave for each URL, kept in Cache Storage so a model already downloaded still loads offline.
+export const DESCRIBE_CACHE = 'anyformer-describe-v1';
+
+export async function describe(repo, { fetch = globalThis.fetch, revision = 'main', endpoint = HF, caches = globalThis.caches } = {}) {
   const url = `${endpoint}/api/models/${repo}${revision === 'main' ? '' : `/revision/${revision}`}?blobs=true`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`describe ${repo}: ${url} returned ${res.status}`);
-  return fromHubInfo(await res.json(), { endpoint });
+  const store = caches ? await caches.open(DESCRIBE_CACHE).catch(() => null) : null;
+  let res, failed;
+  try { res = await fetch(url); } catch (e) { failed = e; }
+  if (res?.ok) {
+    const info = await res.json();
+    await store?.put(url, new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
+    return fromHubInfo(info, { endpoint });
+  }
+  // No network, or the Hub failed: the cached answer, when this browser has one.
+  const hit = await store?.match(url).catch(() => null);
+  if (hit) return fromHubInfo(await hit.json(), { endpoint });
+  throw failed ? new Error(`describe ${repo}: ${url} failed: ${failed.message}`, { cause: failed })
+    : new Error(`describe ${repo}: ${url} returned ${res.status}`);
 }
 
 // Pure: Hub API JSON → descriptor. Exported for tests and for callers that already hold the JSON.

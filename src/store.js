@@ -89,7 +89,7 @@ async function inventory() {
   if (ssd) for await (const [key, h] of ssd.entries()) {
     if (h.kind !== 'directory') continue;
     const src = (await readJson(h, 'manifest.json'))?.source;
-    const repo = src?.repo || repoOf(src?.url) || DISKFORMER_MODELS.find((m) => m.file.toLowerCase().startsWith(key))?.repo;
+    const repo = src?.repo || repoOf(src?.url) || DISKFORMER_MODELS.find((m) => m.file?.toLowerCase().startsWith(key))?.repo;
     add(DISKFORMER_MODELS.some((m) => m.repo === repo) ? 'diskformer' : 'localmind', repo, await dirBytes(h), () => ssd.removeEntry(key, { recursive: true }));
   }
   const wcache = await opfsDir(['cache']);

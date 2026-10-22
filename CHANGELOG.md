@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.3 — 2026-10-23
+
+### Added
+- Ling 3.0 Flash (inclusionAI/Ling-3.0-flash-GGUF, two-part Q4_K_M, 77 GB) on the `diskformer` back end, through
+  diskformer's `LingMoeSsd` hand engine: from a 6.8 GB budget, 5.53 tok/s and an 80.7 GB OPFS store (LocalMind's gate).
+  Not yet run through anyformer in a browser: LocalMind's live check through anyformer is that check.
+- `describe()` keeps the Hub's last answer per repo in Cache Storage (`anyformer-describe-v1`) and uses it when the
+  network fails, so a downloaded model loads offline.
+
+### Changed
+- diskformer pinned to v0.6.2 (f5f1177): adds `ling_moe_ssd.js` and two quant formats to `iq_quants.js`, which no
+  engine gated earlier imports; the earlier gates stand.
+
 ## 0.2.2 — 2026-10-23
 
 ### Added

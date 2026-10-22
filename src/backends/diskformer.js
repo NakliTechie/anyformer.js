@@ -18,6 +18,19 @@ export const DISKFORMER_MODELS = [
     engine: 'qwen35_moe_ssd.js', Engine: 'Qwen35MoeSsd', minBudget: 4e9,
     speeds: [[4e9, 9.2]],
   },
+  // Two parts, ingested as one file by the engine's splitFetch (engines/ling_moe_ssd.js LING_FLASH, rev 29edce5).
+  // Budget and speed from LocalMind's gate (plan/2026-10-22-ling-harness/results.md): 2.51 GB of dense weights on
+  // the GPU plus a 4.29 GB expert pool, 5.53 tok/s decode; the OPFS store is 80.7 GB.
+  {
+    repo: 'inclusionAI/Ling-3.0-flash-GGUF',
+    parts: [
+      { file: 'Q4_K_M/Ling-3.0-flash-Q4_K_M-00001-of-00002.gguf', size: 49995534208 },
+      { file: 'Q4_K_M/Ling-3.0-flash-Q4_K_M-00002-of-00002.gguf', size: 27014610464 },
+    ],
+    size: 49995534208 + 27014610464, storeBytes: 80.7e9,
+    engine: 'ling_moe_ssd.js', Engine: 'LingMoeSsd', minBudget: 6.8e9,
+    speeds: [[6.8e9, 5.53]],
+  },
 ];
 
 // diskformer's engines refuse a budget with a plain Error ("GPU budget 2.50 GB is too small: … need 3.04 GB, and the
@@ -27,8 +40,9 @@ function budgetError(e) {
   return m && new AnyformerError('BUDGET_TOO_SMALL', `diskformer: ${e.message}`, { cause: e, need: Math.ceil((+m[1] + +m[2]) * 1e9) });
 }
 
+const has = (model, file, size) => model.files.gguf.some((f) => f.name === file && f.size === size);
 const match = (model) => DISKFORMER_MODELS.find((m) => m.repo === model.repo &&
-  model.files.gguf.some((f) => f.name === m.file && f.size === m.size));
+  (m.parts ? m.parts.every((p) => has(model, p.file, p.size)) : has(model, m.file, m.size)));
 
 // The speed measured at the largest budget not above this one.
 const speedAt = (m, budget) => m.speeds.filter(([b]) => b <= budget).at(-1)?.[1] ?? null;
@@ -47,13 +61,13 @@ export const diskformerBackend = {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
     if (task && !diskformerBackend.tasks.includes(task)) return { ok: false, code: 'task', reason: `task ${task}; diskformer engines run text generation only` };
     const m = match(model);
-    if (!m) return { ok: false, code: 'model', reason: `no diskformer engine for this GGUF; engines cover ${DISKFORMER_MODELS.map((x) => x.file).join(', ')}` };
+    if (!m) return { ok: false, code: 'model', reason: `no diskformer engine for this GGUF; engines cover ${DISKFORMER_MODELS.map((x) => x.repo).join(', ')}` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     if (!caps.f16) return { ok: false, code: 'f16', reason: 'the GPU lacks shader-f16' };
     if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
     if (budget < m.minBudget) return { ok: false, code: 'budget', need: m.minBudget, reason: `a ${(budget / 1e9).toFixed(1)} GB budget is under the ${m.minBudget / 1e9} GB this model has passed its gate at` };
     // Storage quota is not checked: Chrome raises it as the download writes, while the disk has room.
-    return { ok: true, estimate: { gpuBytes: budget, diskBytes: m.size, tokPerSec: speedAt(m, budget) } };
+    return { ok: true, estimate: { gpuBytes: budget, diskBytes: m.storeBytes ?? m.size, tokPerSec: speedAt(m, budget) } };
   },
 
   // maxCtx sizes the KV cache, which stays on the GPU: the 2.5 GB minimum and the speeds above hold at 1024 tokens,
@@ -66,7 +80,7 @@ export const diskformerBackend = {
       engine = await mod[m.Engine].load(null, {
         // The engines' own default root, named so the store module (src/store.js) lists the same folder.
         gpuBudgetBytes: budget, maxCtx, signal, root: 'localmind-ssd',
-        ...(diskformerBackend.url && { url: diskformerBackend.url(model, m) }),
+        ...(diskformerBackend.url && (m.parts ? { urls: m.parts.map((p) => diskformerBackend.url(model, { ...m, file: p.file })) } : { url: diskformerBackend.url(model, m) })),
         onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
       });
     } catch (e) { throw budgetError(e) || e; }
