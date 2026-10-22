@@ -133,3 +133,29 @@ test('diskformer: generate() turns thinking off by default and on with { thinkin
     assert.deepEqual(calls.map((o) => o.enableThinking), [false, true]);
   } finally { diskformerBackend.source = saved; }
 });
+
+test('diskformer through load(): token ids, think markers, prime, poolBytes and localFile reach the caller and the engine', async () => {
+  const { load } = await import('../index.js');
+  const saved = diskformerBackend.source;
+  diskformerBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  try {
+    const { loads, primed } = await import('./fixtures/fake-engines/gemma4_moe_ssd.js');
+    const caps = { ...full, memory64: true, jspi: true };
+    const file = { name: 'gemma-4-26B_q4_0-it.gguf', size: 14439363584 };
+    const s = await load(gemma.repo, { model: gemma, caps, backends: [diskformerBackend], budget: 7e9, poolBytes: 4 * 2 ** 30, localFile: file });
+    const opts = loads.at(-1);
+    assert.equal(opts.poolBytes, 4 * 2 ** 30);
+    assert.equal(opts.gpuBudgetBytes, undefined);          // with poolBytes the budget only admits the model
+    assert.equal(opts.localFile, file);
+    assert.deepEqual(s.think, { openId: 100, closeId: 101, inPrompt: false, preamble: 'thought\n', always: null });
+    await s.prime('You are helpful.');
+    assert.deepEqual(primed, ['You are helpful.']);
+    const chunks = [];
+    for await (const c of s.generate([{ role: 'user', content: 'hi' }])) chunks.push(c);
+    assert.deepEqual(chunks, [{ text: 'ok', token: 42, tokens: 1 }]);
+    await load(gemma.repo, { model: gemma, caps, backends: [diskformerBackend], budget: 7e9 });
+    assert.equal(loads.at(-1).gpuBudgetBytes, 7e9);        // no poolBytes: the engine sizes its pool from the budget
+    await s.dispose();
+    await assert.rejects(s.prime('x'), /disposed/);
+  } finally { diskformerBackend.source = saved; }
+});

@@ -41,14 +41,14 @@ export async function plan(repoOrEntry, opts = {}) {
 
 export async function load(repoOrEntry, options = {}) {
   const [repo, opts] = entry(repoOrEntry, options);
-  const { backends = BACKENDS, maxCtx, dtype, onProgress, signal } = opts;
+  const { backends = BACKENDS, maxCtx, dtype, poolBytes, localFile, onProgress, signal } = opts;
   let p;
   try { p = await plan(repo, opts); } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${repo}: `); }
   if (!p.chosen) throw noBackend(p);
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   return { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p, ...serialize(session) };
 }
@@ -84,8 +84,25 @@ function serialize(session) {
       release();
     }
   };
+  // A call that waits its turn like generate(): prime and ensureVision share the engine with it.
+  const queued = (fn) => async (...args) => {
+    if (disposed) throw gone();
+    const release = await turn();
+    try {
+      if (disposed) throw gone();
+      return await fn(...args);
+    } catch (e) {
+      throw wrap(e, 'EXECUTION_FAILED');
+    } finally {
+      release();
+    }
+  };
   return {
     ...(generate && { generate }),
+    // Where reasoning starts and ends as token ids ({ openId, closeId, inPrompt, preamble, always }), or null.
+    ...('think' in session && { think: session.think }),
+    ...(session.prime && { prime: queued(session.prime) }),
+    ...(session.ensureVision && { ensureVision: queued(session.ensureVision) }),
     // The one call every task has. For text generation it is the last chunk of generate().
     async run(input, o = {}) {
       if (generate) { let last; for await (const c of generate(input, o)) last = c; return last; }

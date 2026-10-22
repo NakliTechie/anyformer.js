@@ -122,6 +122,8 @@ export const diskformerLlamaBackend = {
       task: 'text-generation',
       llama,
       info,
+      // llama.cpp hands back text pieces, not token ids, so there are no think ids to report.
+      think: null,
       // thinking: false (the default, as the other engines here) renders the template with thinking off, so a model that
       // reasons first answers directly; true lets it think.
       async *generate(messages, { maxNewTokens = 512, signal, thinking = false } = {}) {

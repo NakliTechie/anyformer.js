@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 — 2026-10-23
+
+What LocalMind's worker uses from its disk-tier engines, so its models can move onto anyformer with nothing lost.
+
+### Added
+- `generate()` chunks on the `diskformer` back end carry `token`, the engine's token id.
+- `session.think`: `{ openId, closeId, inPrompt, preamble, always }`, where a model's reasoning starts and ends as
+  token ids (Gemma 4's thought channel, Qwen3.6 and Ling's `<think>`); null where the back end has none.
+- `session.prime(system)`, where the engine has it (Qwen3.6 35B): checkpoints a system prompt after load.
+- `session.ensureVision({ onProgress })`, where the engine has it; image blocks `{ type: 'image', rgb, width, height }`
+  pass through to such an engine. No vision model is in `DISKFORMER_MODELS` yet.
+- `load(repo, { poolBytes })`: the expert cache size, passed to the engine; the budget then only admits the model.
+- `load(repo, { localFile })`: a GGUF the user picked, ingested instead of downloaded.
+
 ## 0.2.5 — 2026-10-23
 
 ### Changed
