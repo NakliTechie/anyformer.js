@@ -183,3 +183,16 @@ test('load(): the session exposes the back end\'s engine read-only', async () =>
     assert.throws(() => { s.engine = null; }, TypeError);
   } finally { diskformerBackend.source = saved; }
 });
+
+test('diskformer: Flint 40B and LFM2.5 24B go to their hand engines, not the llama.cpp path that also checked their files', async () => {
+  const caps = { ...full, memory64: true, jspi: true };
+  const flint = fromHubInfo({ id: 'RecursiveSI/flint-int4-gguf', gguf: { architecture: 'flint' }, siblings: [{ rfilename: 'flint-int4-q4_1.gguf', size: 25992966976 }] });
+  const lfm = fromHubInfo({ id: 'LiquidAI/LFM2.5-24B-A2B-GGUF', gguf: { architecture: 'lfm2moe' }, siblings: [{ rfilename: 'LFM2.5-24B-A2B-QAD-Q4_0.gguf', size: 13578190880 }] });
+  for (const [m, budget] of [[flint, 4e9], [flint, 8e9], [lfm, 4e9], [lfm, 8e9]]) {
+    const p = await plan(m.repo, { model: m, caps, budget });
+    assert.equal(p.chosen, 'diskformer', `${m.repo} at ${budget}`);
+    assert.ok(p.ranked.includes('diskformer-llama'));
+  }
+  assert.equal((await plan(flint.repo, { model: flint, caps, budget: 8e9 })).candidates.find((c) => c.backend === 'diskformer').estimate.tokPerSec, 8.66);
+  assert.equal(diskformerBackend.canRun(lfm, caps, { budget: 3e9 }).need, 4e9);
+});

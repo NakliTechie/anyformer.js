@@ -27,6 +27,21 @@ export const DISKFORMER_MODELS = [
     engine: 'qwen35_moe_ssd.js', Engine: 'MiniCpmV47Ssd', minBudget: 4e9,
     speeds: [[6.1e9, 14.1]],
   },
+  // From LocalMind's gates (M4 Pro, 4 GiB pool; plan/2026-10-22-flint-harness): Flint ~7.3 GB on the GPU at maxCtx
+  // 8192 (dense 2.33, pool 4.29, KV 0.41, batch 0.20), 8.66 tok/s at lookahead 1. LFM2.5 24B ~16 tok/s at a 4 GiB
+  // pool; its total GPU use was not recorded, so it carries no speed estimate. The smallest working budget of either
+  // is unmeasured: 4 GB is a floor, and the engine refuses a smaller fit with the need. Both files are also on the
+  // llama.cpp path's checked list; this back end ranks first (Flint on llama.cpp: 1.8–3.4 tok/s).
+  {
+    repo: 'RecursiveSI/flint-int4-gguf', file: 'flint-int4-q4_1.gguf', size: 25992966976,
+    engine: 'flint_moe_ssd.js', Engine: 'FlintMoeSsd', minBudget: 4e9,
+    speeds: [[7.3e9, 8.66]],
+  },
+  {
+    repo: 'LiquidAI/LFM2.5-24B-A2B-GGUF', file: 'LFM2.5-24B-A2B-QAD-Q4_0.gguf', size: 13578190880,
+    engine: 'lfm2_moe_ssd.js', Engine: 'Lfm2MoeSsd', minBudget: 4e9,
+    speeds: [],
+  },
   // Two parts, ingested as one file by the engine's splitFetch (engines/ling_moe_ssd.js LING_FLASH, rev 29edce5).
   // Budget and speed from LocalMind's gate (plan/2026-10-22-ling-harness/results.md): 2.51 GB of dense weights on
   // the GPU plus a 4.29 GB expert pool, 5.53 tok/s decode; the OPFS store is 80.7 GB.

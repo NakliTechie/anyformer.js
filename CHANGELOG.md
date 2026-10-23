@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.2 — 2026-10-23
+
+### Added
+- Flint 40B-A2.5B (RecursiveSI/flint-int4-gguf, Q4_1, 26.0 GB) and LFM2.5 24B-A2B (LiquidAI/LFM2.5-24B-A2B-GGUF,
+  QAD-Q4_0, 13.6 GB) on the `diskformer` back end, through diskformer's `FlintMoeSsd` and `Lfm2MoeSsd` hand engines.
+  Before, both routed to the llama.cpp path (Flint 1.8–3.4 tok/s there against 8.66 on its engine). Numbers from
+  LocalMind's gates: Flint ~7.3 GB on the GPU with a 4 GiB pool, 8.66 tok/s; LFM2.5 24B ~16 tok/s at a 4 GiB pool.
+  Floors of 4 GB are unmeasured. Not yet run through anyformer in a browser; LocalMind's live check is that check.
+
+### Changed
+- README: the `localmind` back end's kernels ship in diskformer.
+
 ## 0.4.1 — 2026-10-23
 
 ### Fixed

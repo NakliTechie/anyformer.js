@@ -56,9 +56,9 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 |---|---|---|
 | `transformers` | transformers.js 4.3.1: text generation, image and audio chat (Gemma 4, Qwen3.5), embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
 | `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion` |
-| `localmind` | LocalMind's hand-written WebGPU kernels, the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
+| `localmind` | LocalMind's hand-written WebGPU kernels (shipped in diskformer), the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
 | `wllama` | llama.cpp in WebAssembly: WebGPU when the budget holds the model, the CPU otherwise (no WebGPU needed) | any GGUF up to about 3.6 GB that no engine above covers; files over 2 GB are split into OPFS shards once |
-| `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB), Ling 3.0 Flash 124B (from 6.8 GB), MiniCPM-V 4.7 with images (from 4 GB) |
+| `diskformer` | diskformer engines: weights in OPFS, only what a step needs on the GPU | Gemma 4 26B-A4B (from 2.5 GB), Qwen3.6 35B-A3B (from 4 GB), Ling 3.0 Flash 124B (from 6.8 GB), MiniCPM-V 4.7 with images, Flint 40B, LFM2.5 24B (from 4 GB) |
 | `diskformer-llama` | diskformer's llama.cpp build with WebGPU, mixture-of-experts layers paged in from OPFS | GGUFs of the 17 MoE architectures diskformer has checked (Granite 4.0 H, gpt-oss, GLM-4.7-Flash, LFM2 MoE…); a hand engine above wins where it covers the model |
 
 Each runtime loads from an exact version or commit in [src/sources.js](src/sources.js); set a back end's `.source`
