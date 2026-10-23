@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1 — 2026-10-23
+
+### Fixed
+- `session.speculative` and `session.pleMode` were copied once when `load()` returned, because the session object was
+  built with spreads, which read getters. A Bonsai session's `speculative.status` stayed `'loading'` after DFlash or
+  MTP attached. They are now read live. A test through `load()` failed on 0.4.0 and passes now.
+
+### Added
+- `session.engine`: the engine instance the `diskformer` and `localmind` back ends built, read-only, for token-level
+  work a caller already does with it (Bonsai 2's tokenizer and think-marker ids in LocalMind's worker). Calls on it
+  bypass the session's one-call-at-a-time queue.
+
 ## 0.4.0 — 2026-10-23
 
 What LocalMind's own workers do with its last three engine families (LFM2.5, Gemma 4 E2B/E4B, Ternary Bonsai 2 27B),

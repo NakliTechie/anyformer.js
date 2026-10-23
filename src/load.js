@@ -50,7 +50,8 @@ export async function load(repoOrEntry, options = {}) {
   try {
     session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
-  return { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p, ...serialize(session) };
+  // Added onto serialize()'s object, not spread: a spread would read its getters once and freeze them.
+  return Object.assign(serialize(session), { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p });
 }
 
 // content: a string, or an array of { type, … } blocks (text, image, audio) for multimodal models.
@@ -97,16 +98,13 @@ function serialize(session) {
       release();
     }
   };
-  return {
+  const out = {
     ...(generate && { generate }),
     // Where reasoning starts and ends as token ids ({ openId, closeId, inPrompt, preamble, always }), or null.
     ...('think' in session && { think: session.think }),
     ...(session.prime && { prime: queued(session.prime) }),
     ...(session.ensureVision && { ensureVision: queued(session.ensureVision) }),
     ...(session.reset && { reset: queued(session.reset) }),
-    // Read-through state the back end keeps up to date (Gemma 4's PLE mode; Bonsai's speculative decoding).
-    ...('pleMode' in session && { get pleMode() { return session.pleMode; } }),
-    ...('speculative' in session && { get speculative() { return session.speculative; } }),
     // The one call every task has. For text generation it is the last chunk of generate().
     async run(input, o = {}) {
       if (generate) { let last; for await (const c of generate(input, o)) last = c; return last; }
@@ -128,4 +126,9 @@ function serialize(session) {
       await session.dispose?.();
     },
   };
+  // Read live from the back end's session, never copied: the engine instance it built (diskformer and localmind back
+  // ends; read-only, for token-level work a caller already does with the engine; calls on it bypass the queue),
+  // Gemma 4's PLE mode, and Bonsai's speculative decoding state, which changes after load.
+  for (const k of ['engine', 'pleMode', 'speculative']) if (k in session) Object.defineProperty(out, k, { get: () => session[k], enumerable: true });
+  return out;
 }

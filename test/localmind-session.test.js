@@ -91,3 +91,18 @@ test('localmind: Bonsai MTP maps the head\'s absolute offsets onto the downloade
     assert.equal(s.speculative.stats.drafted, 2);
   } finally { localmindBackend.source = saved; delete globalThis.caches; }
 });
+
+test('load(): session.speculative is read live, so its status moves from loading to ready after load returns', async () => {
+  const { load } = await import('../index.js');
+  const saved = localmindBackend.source;
+  localmindBackend.source = fakes;
+  const env = browserish(new Uint8Array([9, 9, 9, 9]));
+  try {
+    const caps = { webgpu: true, f16: true, subgroups: true, opfs: true, memory64: true, jspi: true };
+    const s = await load(bonsai.repo, { model: bonsai, caps, backends: [localmindBackend], budget: 7e9, fetch: env.fetch, speculative: { dflash: {} } });
+    assert.equal(s.speculative.status, 'loading');
+    for (let i = 0; i < 100 && s.speculative.status === 'loading'; i++) await new Promise((r) => setTimeout(r, 5));
+    assert.equal(s.speculative.status, 'ready');
+    assert.equal(typeof s.engine.reset, 'function');
+  } finally { localmindBackend.source = saved; delete globalThis.caches; }
+});

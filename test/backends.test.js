@@ -172,3 +172,14 @@ test('diskformer: MiniCPM-V 4.7 goes to its hand engine (the only one that reads
   assert.equal((await plan(mini.repo, { model: mini, caps, budget: 7e9 })).candidates.find((c) => c.backend === 'diskformer').estimate.tokPerSec, 14.1);
   assert.equal(diskformerBackend.canRun(mini, caps, { budget: 3e9 }).need, 4e9);
 });
+
+test('load(): the session exposes the back end\'s engine read-only', async () => {
+  const { load } = await import('../index.js');
+  const saved = diskformerBackend.source;
+  diskformerBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  try {
+    const s = await load(gemma.repo, { model: gemma, caps: { ...full, memory64: true, jspi: true }, backends: [diskformerBackend], budget: 7e9 });
+    assert.equal(s.engine.thinkOpenTokenId, 100);
+    assert.throws(() => { s.engine = null; }, TypeError);
+  } finally { diskformerBackend.source = saved; }
+});
