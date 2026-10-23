@@ -1,4 +1,4 @@
-// Move src/sources.js's git pins (kohra, diskformer, LocalMind) to each repo's current main.
+// Move src/sources.js's git pins (kohra, diskformer) to each repo's current main.
 //   node scripts/pin-sources.mjs           rewrite the pins, print old → new
 //   node scripts/pin-sources.mjs --check   change nothing; exit 1 when a pin is behind main
 // transformers.js is pinned by hand (in step with LocalMind); this prints npm's latest for reference.
@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const FILE = new URL('../src/sources.js', import.meta.url);
-const REPOS = { kohra: 'kohra', diskformer: 'diskformer.js', localmind: 'LocalMind' };
+const REPOS = { kohra: 'kohra', diskformer: 'diskformer.js' };
 const check = process.argv.includes('--check');
 
 const head = async (repo) => {

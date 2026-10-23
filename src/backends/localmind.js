@@ -1,7 +1,8 @@
 // LocalMind's hand-written WebGPU engines: whole model resident on the GPU, kernels written per architecture. Each
 // engine reads its config from the model file, so it runs any checkpoint of its architecture in a format it reads,
-// not only the one LocalMind ships. They load from the CDN at load() time, at the commit src/sources.js pins; set
-// localmindBackend.source to load another copy.
+// not only the one LocalMind ships. They live in diskformer (engines/, since v0.6.4) and load from the CDN at load()
+// time, at the commit src/sources.js pins; set localmindBackend.source to load another copy. The id stays 'localmind',
+// the name callers and stored() already use, though no code loads from LocalMind's repo any more.
 //
 //   lfm2     src/lfm2_5.js           GGUF, general.architecture 'lfm2' (dense LFM2 / LFM2.5), Q4_0 Q8_0 Q4_K Q5_K Q6_K
 //   gemma4   src/gemma-4-e2b.js      Google's QAT-mobile safetensors export of Gemma 4 (E2B, E4B): config.json-driven
@@ -58,7 +59,7 @@ function match(model) {
 export const localmindBackend = {
   id: 'localmind',
   tasks: ['text-generation'],
-  source: SOURCES.localmind,
+  source: SOURCES.diskformer,
 
   canRun(model, caps, { budget, task }) {
     const m = match(model);

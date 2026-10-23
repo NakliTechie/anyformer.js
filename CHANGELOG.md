@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2 — 2026-10-23
+
+### Changed
+- Nothing loads from the LocalMind repo any more. diskformer v0.6.4 (095ab20) holds LocalMind's whole-model
+  engines too (LFM2.5, Gemma 4 E2B/E4B, Ternary Bonsai 2 27B; MIT, confirmed by their author), and the `localmind`
+  back end loads them from diskformer's `engines/`. The id stays `localmind`. `PINS.localmind` and
+  `SOURCES.localmind` are gone.
+- LFM2.5 230M through the `localmind` back end from diskformer's copy: the same reply as from LocalMind's commit
+  203288a (the engine file is byte-identical), on topic.
+
 ## 0.3.1 — 2026-10-23
 
 ### Added

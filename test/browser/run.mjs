@@ -1,7 +1,7 @@
 // Runs one test page in headless Chrome and prints window.result; exit 0 pass, 1 fail, 2 timeout.
 //   node test/browser/run.mjs <page> [--port N] [--profile dir] [--minutes N] [--budget GB] [--query a=b&c=d] [--models dir,…]
 // <page> is a test page name (test/browser/<page>.html) or a path from the repo root (examples/chat/index.html).
-// kohra, diskformer and LocalMind load at the commits src/sources.js pins; --main loads each repo's current main commit
+// kohra and diskformer load at the commits src/sources.js pins; --main loads each repo's current main commit
 // instead (looked up on GitHub, so jsDelivr's cached @main never answers), to test a pin move before making it.
 // diskformer-chat keeps a fixed port and profile by default: OPFS belongs to the origin, so the 14.4 GB model downloads
 // once across runs.
@@ -51,9 +51,9 @@ const port = server.address().port, cdp = 9500 + (port % 400);
 
 const head = async (repo) => (await (await fetch(`https://api.github.com/repos/NakliTechie/${repo}/commits/main`)).json()).sha;
 const main = process.argv.includes('--main');
-const [kohra, diskformer, localmind] = main ? await Promise.all([head('kohra'), head('diskformer.js'), head('LocalMind')]) : [];
-const q = new URLSearchParams({ ...(main && { kohra, diskformer, localmind }), ...(arg('budget') && { budget: arg('budget') }), ...Object.fromEntries(new URLSearchParams(arg('query', ''))) });
-if (main) console.error(`kohra main ${kohra.slice(0, 7)}, diskformer main ${diskformer.slice(0, 7)}, LocalMind main ${localmind.slice(0, 7)}`);
+const [kohra, diskformer] = main ? await Promise.all([head('kohra'), head('diskformer.js')]) : [];
+const q = new URLSearchParams({ ...(main && { kohra, diskformer }), ...(arg('budget') && { budget: arg('budget') }), ...Object.fromEntries(new URLSearchParams(arg('query', ''))) });
+if (main) console.error(`kohra main ${kohra.slice(0, 7)}, diskformer main ${diskformer.slice(0, 7)}`);
 
 // A throwaway profile (no --profile, not diskformer-chat) is deleted on exit: its downloads are never reused.
 const temporary = !arg('profile') && !chat;
