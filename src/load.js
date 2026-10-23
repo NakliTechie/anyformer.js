@@ -41,14 +41,14 @@ export async function plan(repoOrEntry, opts = {}) {
 
 export async function load(repoOrEntry, options = {}) {
   const [repo, opts] = entry(repoOrEntry, options);
-  const { backends = BACKENDS, maxCtx, dtype, poolBytes, localFile, onProgress, signal } = opts;
+  const { backends = BACKENDS, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, onProgress, signal } = opts;
   let p;
   try { p = await plan(repo, opts); } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${repo}: `); }
   if (!p.chosen) throw noBackend(p);
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   return { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p, ...serialize(session) };
 }
@@ -103,6 +103,10 @@ function serialize(session) {
     ...('think' in session && { think: session.think }),
     ...(session.prime && { prime: queued(session.prime) }),
     ...(session.ensureVision && { ensureVision: queued(session.ensureVision) }),
+    ...(session.reset && { reset: queued(session.reset) }),
+    // Read-through state the back end keeps up to date (Gemma 4's PLE mode; Bonsai's speculative decoding).
+    ...('pleMode' in session && { get pleMode() { return session.pleMode; } }),
+    ...('speculative' in session && { get speculative() { return session.speculative; } }),
     // The one call every task has. For text generation it is the last chunk of generate().
     async run(input, o = {}) {
       if (generate) { let last; for await (const c of generate(input, o)) last = c; return last; }

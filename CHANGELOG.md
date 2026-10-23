@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.0 — 2026-10-23
+
+What LocalMind's own workers do with its last three engine families (LFM2.5, Gemma 4 E2B/E4B, Ternary Bonsai 2 27B),
+on the `localmind` back end, so those models can move onto anyformer with nothing lost.
+
+### Added
+- `load(repo, { fetch })`: the engines' fetch, for a caller's retrying fetch on multi-GB range reads.
+- `load(repo, { ple: true })` for Gemma 4 E2B/E4B: the per-layer-embedding table streams from OPFS (diskformer's
+  `ple-opfs.js`); `session.pleMode` reports the mode.
+- `load(repo, { speculative })` for Ternary Bonsai 2 27B: `{ dflash: { block } }` (DFlash 2) or
+  `{ mtp: { depth, adaptive } }`, attached after the model is ready so the first reply never waits for it. The drafter
+  and the MTP head download once into Cache Storage, under LocalMind's names and keys, so a browser that holds them
+  reuses them. `session.speculative` gives `{ status, error, stats }`. Output is greedy-identical either way.
+- `generate(messages, { thinking, assistantPrefix })` on the `localmind` back end: thinking per request (Bonsai's
+  template, `reasoning_effort: 'medium'`) and a raw prefix to continue from; chunks carry `token`.
+- `session.reset()` where the engine has it, queued with `generate()`.
+
+### Measured
+- LFM2.5 230M through the `localmind` back end: the same reply as before these changes. Node tests cover each option
+  with stand-in engines (83/83). Gemma's PLE table and Bonsai's DFlash and MTP have not run through anyformer in a
+  browser; LocalMind's A/B per model is that check.
+
 ## 0.3.2 — 2026-10-23
 
 ### Changed

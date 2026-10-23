@@ -72,23 +72,33 @@ export const localmindBackend = {
     return { ok: true, estimate: { gpuBytes: m.bytes, diskBytes: m.bytes, tokPerSec: MEASURED[model.repo] ?? null } };
   },
 
-  async load(model, { maxCtx, onProgress, signal }) {
+  // Options beyond the shared ones, as LocalMind's workers use the engines:
+  //   fetch        the engines' fetch (a caller's retrying fetch for multi-GB range reads)
+  //   ple          Gemma 4: stream the per-layer-embedding table from OPFS (ple-opfs.js) instead of holding it
+  //   speculative  Ternary Bonsai 2: { dflash: { block } } or { mtp: { depth, adaptive } }, attached after the model is
+  //                ready, so the first reply never waits for the drafter's download (src/backends/speculative.js)
+  async load(model, { maxCtx, fetch, ple, speculative, onProgress, signal }) {
     const m = match(model);
     const e = ENGINES[m.engine];
-    const mod = await import(`${localmindBackend.source}/${e.file}`);
+    const engines = localmindBackend.source;
+    const mod = await import(`${engines}/${e.file}`);
+    const say = onProgress && ((p) => onProgress({ backend: 'localmind', engine: m.engine, ...p }));
+    let pleTable = null;
+    if (ple && m.engine === 'gemma4') {
+      const { createGemmaPle } = await import(`${engines}/ple-opfs.js`);
+      pleTable = await createGemmaPle({ source: { repo: model.repo }, onStatus: (s) => say?.({ status: 'ple', ...s }) });
+    }
     const opts = {
-      revision: model.revision || 'main', signal,
-      onProgress: onProgress && ((p) => onProgress({ backend: 'localmind', engine: m.engine, ...p })),
+      revision: model.revision || 'main', signal, onProgress: say,
+      ...(fetch && { fetch }),
+      ...(pleTable && { ple: pleTable }),
       ...(m.engine !== 'gemma4' && { file: m.file }),
       ...(maxCtx && m.engine !== 'gemma4' && { maxLength: maxCtx }),
     };
     const engine = await mod[e.Engine].load(model.repo, opts);
     signal?.throwIfAborted();
-    // Thinking off, as the diskformer back end does: a chat reply, not the model's reasoning. (The qwen35 engine
-    // takes template arguments as a field; LocalMind sets the same one.)
-    if ('chatTemplateArgs' in engine) engine.chatTemplateArgs = { ...engine.chatTemplateArgs, enable_thinking: false };
     // Compile the kernels now, as LocalMind's workers do, so the first reply is not paying for it.
-    onProgress?.({ backend: 'localmind', engine: m.engine, status: 'warmup' });
+    say?.({ status: 'warmup' });
     await engine.warmup?.();
     // Gemma's template has no system turn; LocalMind folds the system prompt into the first user turn the same way.
     const prepare = m.engine !== 'gemma4' ? (msgs) => msgs : (msgs) => {
@@ -97,18 +107,43 @@ export const localmindBackend = {
       const i = rest.findIndex((x) => x.role === 'user');
       return sys && i >= 0 ? rest.map((x, k) => (k === i ? { ...x, content: `${sys}\n\n${x.content}` } : x)) : rest;
     };
+    // Speculative decoding, Bonsai only, in the background: a reply that starts before it lands decodes plainly.
+    const spec = { status: speculative && m.engine === 'qwen35' ? 'loading' : 'off', runner: null, error: null, disposed: false };
+    if (spec.status === 'loading') {
+      import('./speculative.js')
+        .then(({ attachSpeculative }) => attachSpeculative(engine, speculative, { engines, fetch, signal, onProgress: (p) => say?.({ ...p, speculative: true }) }))
+        .then((runner) => {
+          // Disposed while the drafter downloaded: detach and free it rather than attach to a dead engine.
+          if (spec.disposed) { engine.model.dflashRunner = null; runner.dispose?.(); return; }
+          spec.runner = runner; spec.status = 'ready';
+        }, (err) => { spec.error = err.message; spec.status = 'error'; });
+    }
     let tokens = 0;
     return {
       task: 'text-generation',
       engine,
-      async *generate(messages, { maxNewTokens = 512, signal } = {}) {
+      // Gemma 4 with the OPFS table: 'resident' or the streamed mode the engine reports.
+      ...(m.engine === 'gemma4' && { get pleMode() { return engine.pleMode ?? null; } }),
+      // { status: 'off' | 'loading' | 'ready' | 'error', error, stats }; stats are the runner's counters.
+      get speculative() { return { status: spec.status, error: spec.error, stats: spec.runner?.stats ?? null }; },
+      // thinking: per request, through the qwen35 engine's template arguments (reasoning_effort 'medium', LocalMind's
+      // serving recipe); the other two engines have no thinking switch. assistantPrefix: raw text the reply continues
+      // from (Bonsai's think-budget continuation). Chunks carry the engine's token id.
+      async *generate(messages, { maxNewTokens = 512, signal, thinking = false, assistantPrefix } = {}) {
+        if ('chatTemplateArgs' in engine) engine.chatTemplateArgs = { ...engine.chatTemplateArgs, enable_thinking: thinking === true, reasoning_effort: 'medium' };
         tokens = 0;
-        for await (const c of engine.generate(prepare(messages), { maxNewTokens, signal })) {
+        for await (const c of engine.generate(prepare(messages), { maxNewTokens, signal, ...(assistantPrefix != null && { assistantPrefix }) })) {
           if (c.token != null) tokens++;
-          yield { text: c.text, tokens };
+          yield { text: c.text, token: c.token, tokens };
         }
       },
-      dispose: () => engine.dispose?.(),
+      // Drops the KV and recurrent state, for a new conversation or a shorter history.
+      ...(typeof engine.reset === 'function' && { reset: () => engine.reset() }),
+      dispose: () => {
+        spec.disposed = true;
+        if (spec.runner) { engine.model.dflashRunner = null; spec.runner.dispose?.(); }
+        return engine.dispose?.();
+      },
     };
   },
 };
