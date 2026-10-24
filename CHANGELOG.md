@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased (waits for diskformer 0.6.5 on npm, then the pin moves to v0.6.5)
+
+### Added
+- `diskformer-llama` loads split GGUFs (`name-00001-of-0000n.gguf`): `pickGguf` returns a set named by its first part,
+  with every part and their summed size; a set missing a part is refused. Each part downloads into OPFS under its own
+  file name and `load` names the first, as diskformer v0.6.5's worker expects. Ling 3.0 Flash (77 GB, 2 parts) now
+  routes to the llama.cpp path under the hand engine's 6.8 GB floor (diskformer v0.6.5: 6 GB, 4.1–4.9 tok/s, 6/9 vs
+  llama.cpp on the CPU) and stays on the hand engine above it. Node-tested; not yet run through anyformer in a browser.
+
+### Changed
+- OPFS names for llama.cpp's GGUFs drop the repo's folders (gguf/<file name>); a file in a repo subfolder failed before.
+
 ## 0.4.2 — 2026-10-23
 
 ### Added

@@ -116,10 +116,11 @@ test('diskformer: Ling 3.0 Flash needs both parts at their sizes and a 6.8 GB bu
   assert.equal(small.need, 6.8e9);
   assert.equal(diskformerBackend.canRun(ling([[P1, 49995534208]]), caps, { budget: 7e9 }).code, 'model');
   assert.equal(diskformerBackend.canRun(ling([[P1, 49995534208], [P2, 1]]), caps, { budget: 7e9 }).code, 'model');
-  // The default back ends: the hand engine; the llama.cpp path refuses a split set.
+  // The default back ends: the hand engine; under its 6.8 GB floor, the llama.cpp path (diskformer v0.6.5: 6 GB, 4.1-4.9 tok/s).
   const p = await plan(both.repo, { model: both, caps, budget: 7e9 });
   assert.equal(p.chosen, 'diskformer');
-  assert.equal(p.candidates.find((c) => c.backend === 'diskformer-llama').code, 'model');
+  assert.deepEqual(p.ranked.slice(0, 2), ['diskformer', 'diskformer-llama']);
+  assert.equal((await plan(both.repo, { model: both, caps, budget: 6e9 })).chosen, 'diskformer-llama');
 });
 
 test('diskformer: generate() turns thinking off by default and on with { thinking: true }', async () => {

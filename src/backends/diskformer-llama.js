@@ -30,21 +30,42 @@ export const CHECKED_FILES = [
   'North-Mini-Code-1.0-UD-Q3_K_M.gguf', 'LFM2.5-24B-A2B-QAD-Q4_0.gguf', 'LFM2-8B-A1B-Q4_K_M.gguf',
   'Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf', 'Ling-mini-2.0-Q4_K_M.gguf', 'granite-4.0-h-tiny-Q4_K_M.gguf',
   'Ling-3.0-tiny-Q4_K_M.gguf', 'flint-int4-q4_1.gguf', 'OLMoE-1B-7B-0125-Instruct-Q4_K_M.gguf',
+  'Ling-3.0-flash-Q4_K_M-00001-of-00002.gguf',
 ];
 
-// The GGUF to load: the language model (no mmproj vision tower), one file (no split sets). The caller's file when
-// given; else the file diskformer checked; else the preferred quant.
+const SPLIT = /-(\d{5})-of-(\d{5})\.gguf$/i;
+
+// The GGUF to load, as { name, size, parts: [{ name, size }] }: the language model (no mmproj vision tower), one file or
+// every part of a split set (name-00001-of-0000n.gguf, named by its first part; size is the sum). The caller's file
+// when given; else the file diskformer checked; else the preferred quant, a single file before a split set.
 export function pickGguf(model, file = null) {
-  const lms = model.files.gguf.filter((f) => !/mmproj/i.test(f.name) && !/-\d{5}-of-\d{5}\.gguf$/.test(f.name));
-  if (file) return lms.find((f) => f.name === file) || null;
-  const checked = lms.find((f) => CHECKED_FILES.includes(f.name.split('/').pop()));
+  const lms = model.files.gguf.filter((f) => !/mmproj/i.test(f.name));
+  const sets = new Map();
+  for (const f of lms.filter((x) => SPLIT.test(x.name))) {
+    const base = f.name.replace(SPLIT, '');
+    sets.set(base, [...(sets.get(base) || []), f]);
+  }
+  const candidates = [
+    ...lms.filter((f) => !SPLIT.test(f.name)).map((f) => ({ name: f.name, size: f.size, parts: [f] })),
+    // A set missing a part cannot load.
+    ...[...sets.values()].filter((p) => p.length === Number(SPLIT.exec(p[0].name)[2])).map((p) => {
+      const parts = [...p].sort((a, b) => a.name.localeCompare(b.name));
+      return { name: parts[0].name, size: parts.reduce((n, f) => n + f.size, 0), parts };
+    }),
+  ];
+  if (file) return candidates.find((f) => f.name === file) || null;
+  const checked = candidates.find((f) => CHECKED_FILES.includes(opfsName(f)));
   if (checked) return checked;
   for (const q of QUANTS) {
-    const f = lms.find((x) => new RegExp(`(^|[-_.])${q}([-_.]|$)`, 'i').test(x.name.replace(/\.gguf$/i, '')));
+    const f = candidates.find((x) => new RegExp(`(^|[-_.])${q}([-_.]|$)`, 'i').test(x.name.replace(SPLIT, '').replace(/\.gguf$/i, '')));
     if (f) return f;
   }
   return null;
 }
+
+// llama.cpp's GGUFs sit in OPFS as gguf/<file name>, without the repo's folders: the worker finds a split set's other
+// parts by name beside the first.
+const opfsName = (f) => f.name.split('/').pop();
 
 // OPFS keeps llama.cpp's GGUFs by file name (gguf/<name>), with no repo. anyformer records name → repo here, so
 // stored() can say which repo a file belongs to.
@@ -82,7 +103,7 @@ export const diskformerLlamaBackend = {
     if (task && !diskformerLlamaBackend.tasks.includes(task)) return { ok: false, code: 'task', reason: `task ${task}; diskformer's llama.cpp path runs text generation only` };
     if (!LLAMA_ARCHITECTURES.includes(model.architecture)) return { ok: false, code: 'model', reason: `architecture ${model.architecture || 'unknown'} is not one diskformer's llama.cpp path has checked (${LLAMA_ARCHITECTURES.join(', ')})` };
     const f = pickGguf(model, file);
-    if (!f) return { ok: false, code: 'model', reason: file ? `${file} is not a single-file language-model GGUF in the repo` : `no single-file GGUF at ${QUANTS.join(', ')} in the repo` };
+    if (!f) return { ok: false, code: 'model', reason: file ? `${file} is not a language-model GGUF in the repo (a split set is named by its first part, with every part present)` : `no GGUF at ${QUANTS.join(', ')} in the repo (a split set needs every part)` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     if (!caps.memory64 || !caps.jspi) return { ok: false, code: 'webgpu', reason: 'the llama.cpp build needs wasm memory64 and JSPI (Chrome or Edge 137+)' };
     if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
@@ -100,16 +121,22 @@ export const diskformerLlamaBackend = {
     signal?.addEventListener('abort', stop, { once: true });
     let info;
     try {
-      const have = (await llama.list()).find((m) => m.name === f.name && !m.partial);
-      if (!have || have.size !== f.size) {
-        say({ status: 'download', loaded: 0, total: f.size });
-        await llama.download({ url: diskformerLlamaBackend.url(model, f), name: f.name, size: f.size },
-          (p) => say({ status: 'download', loaded: p.copied, total: p.total }));
-        signal?.throwIfAborted();
+      // Each part downloads under its own name; progress counts bytes over the whole set.
+      let before = 0;
+      for (const part of f.parts) {
+        const name = opfsName(part);
+        const have = (await llama.list()).find((m) => m.name === name && !m.partial);
+        if (!have || have.size !== part.size) {
+          say({ status: 'download', loaded: before, total: f.size });
+          await llama.download({ url: diskformerLlamaBackend.url(model, part), name, size: part.size },
+            (p) => say({ status: 'download', loaded: before + p.copied, total: f.size }));
+          signal?.throwIfAborted();
+        }
+        before += part.size;
       }
-      await writeIndex({ ...(await readIndex()), [f.name]: model.repo });
+      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(f.parts.map((p) => [opfsName(p), model.repo])) });
       say({ status: 'load' });
-      info = await llama.load({ name: f.name, budget, ctx: maxCtx }, (p) => say({ status: 'plan', plan: p }));
+      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx }, (p) => say({ status: 'plan', plan: p }));
       signal?.throwIfAborted();
     } catch (e) {
       llama.terminate();

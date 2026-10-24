@@ -30,11 +30,15 @@ run('llama-gate', async () => {
     const { Llama } = await import(diskformerLlamaBackend.source);
     const l = new Llama();
     let at = 0;
-    await l.download({ url: diskformerLlamaBackend.url(model, f), name: f.name, size: f.size },
-      (d) => { if (Date.now() - at > 15000) { at = Date.now(); log(`copy ${(d.copied / 1e9).toFixed(2)} of ${(d.total / 1e9).toFixed(2)} GB`); } });
-    const stored = (await l.list()).find((m) => m.name === f.name);
+    // Every part of a split set, each under its own file name (the worker finds the parts beside the first).
+    for (const part of f.parts) {
+      await l.download({ url: diskformerLlamaBackend.url(model, part), name: part.name.split('/').pop(), size: part.size },
+        (d) => { if (Date.now() - at > 15000) { at = Date.now(); log(`copy ${part.name}: ${(d.copied / 1e9).toFixed(2)} of ${(d.total / 1e9).toFixed(2)} GB`); } });
+    }
+    const list = await l.list();
+    const stored = f.parts.map((part) => list.find((m) => m.name === part.name.split('/').pop()));
     l.terminate();
-    return { ok: stored?.size === f.size && !stored.partial, copied: f.name, bytes: stored?.size };
+    return { ok: stored.every((m, k) => m?.size === f.parts[k].size && !m.partial), copied: f.name, bytes: stored.reduce((n, m) => n + (m?.size || 0), 0) };
   }
   const t0 = performance.now();
   let lastAt = 0;
