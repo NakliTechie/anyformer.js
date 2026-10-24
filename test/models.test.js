@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { MODELS, BACKENDS, plan, fromHubInfo } from '../index.js';
 
 const entries = Object.values(MODELS).flatMap((family) => Object.values(family));
-const caps = { webgpu: true, f16: true, subgroups: true, opfs: true };
+const caps = { webgpu: true, f16: true, subgroups: true, opfs: true, memory64: true, jspi: true };
 
 test('every MODELS entry names a registered back end and an existing browser test page', () => {
   for (const m of entries) {
@@ -30,6 +30,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'openbmb/MiniCPM5-2B-GGUF': 'openbmb_MiniCPM5-2B-GGUF',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
+    'nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB': 'nvidia_NVIDIA-Nemotron-3.5-Bolt-E4B-4GB',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
     'Xenova/detr-resnet-50': 'Xenova_detr-resnet-50',
   };

@@ -128,7 +128,7 @@ function serialize(session) {
   };
   // Read live from the back end's session, never copied: the engine instance it built (diskformer and localmind back
   // ends; read-only, for token-level work a caller already does with the engine; calls on it bypass the queue),
-  // Gemma 4's PLE mode, and Bonsai's speculative decoding state, which changes after load.
-  for (const k of ['engine', 'pleMode', 'speculative']) if (k in session) Object.defineProperty(out, k, { get: () => session[k], enumerable: true });
+  // Gemma 4's PLE mode, Bonsai's speculative decoding state, which changes after load, and the llama.cpp path's drafter.
+  for (const k of ['engine', 'pleMode', 'speculative', 'drafter']) if (k in session) Object.defineProperty(out, k, { get: () => session[k], enumerable: true });
   return out;
 }

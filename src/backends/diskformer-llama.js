@@ -35,6 +35,13 @@ export const CHECKED_FILES = [
 
 const SPLIT = /-(\d{5})-of-(\d{5})\.gguf$/i;
 
+// Drafters diskformer has checked for a target GGUF (ggml/chat.html CATALOG at the pinned commit), keyed by the
+// target's file name. The drafter downloads beside the target and llama.cpp speculates with it; replies stay
+// greedy-identical (Nemotron 3.5 Bolt E4B + DFlash: 9/9 against plain greedy and llama-server on WebGPU).
+export const DRAFTERS = {
+  'Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf': { repo: 'nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB-DFlash', name: 'Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf', size: 736812096 },
+};
+
 // The GGUF to load, as { name, size, parts: [{ name, size }] }: the language model (no mmproj vision tower), one file or
 // every part of a split set (name-00001-of-0000n.gguf, named by its first part; size is the sum). The caller's file
 // when given; else the file diskformer checked; else the preferred quant, a single file before a split set.
@@ -108,12 +115,18 @@ export const diskformerLlamaBackend = {
     if (!caps.memory64 || !caps.jspi) return { ok: false, code: 'webgpu', reason: 'the llama.cpp build needs wasm memory64 and JSPI (Chrome or Edge 137+)' };
     if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
     // The budget is not checked here: llama.cpp plans its expert slots from it at load time, and refuses there.
-    return { ok: true, estimate: { gpuBytes: budget, diskBytes: f.size, tokPerSec: null } };
+    return { ok: true, estimate: { gpuBytes: budget, diskBytes: f.size + (DRAFTERS[opfsName(f)]?.size ?? 0), tokPerSec: null } };
   },
 
   // maxCtx sizes the KV cache; 1024 is the context diskformer's gates run at.
-  async load(model, { budget, file = null, maxCtx = 1024, onProgress, signal }) {
+  // speculative: false loads the target alone; otherwise a model with a checked drafter (DRAFTERS) loads it too.
+  async load(model, { budget, file = null, maxCtx = 1024, speculative, onProgress, signal }) {
     const f = pickGguf(model, file);
+    const drafter = speculative === false ? null : DRAFTERS[opfsName(f)] ?? null;
+    // The drafter is one more file to fetch; it lives in its own repo.
+    const files = [...f.parts.map((p) => ({ name: opfsName(p), size: p.size, url: diskformerLlamaBackend.url(model, p) })),
+      ...(drafter ? [{ name: drafter.name, size: drafter.size, url: diskformerLlamaBackend.url({ ...model, repo: drafter.repo, revision: null }, drafter) }] : [])];
+    const total = files.reduce((n, x) => n + x.size, 0);
     const { Llama } = await import(diskformerLlamaBackend.source);
     const llama = new Llama();
     const say = (e) => onProgress?.({ backend: 'diskformer-llama', file: f.name, ...e });
@@ -121,22 +134,21 @@ export const diskformerLlamaBackend = {
     signal?.addEventListener('abort', stop, { once: true });
     let info;
     try {
-      // Each part downloads under its own name; progress counts bytes over the whole set.
+      // Each part (and the drafter) downloads under its own name; progress counts bytes over all of them.
       let before = 0;
-      for (const part of f.parts) {
-        const name = opfsName(part);
-        const have = (await llama.list()).find((m) => m.name === name && !m.partial);
-        if (!have || have.size !== part.size) {
-          say({ status: 'download', loaded: before, total: f.size });
-          await llama.download({ url: diskformerLlamaBackend.url(model, part), name, size: part.size },
-            (p) => say({ status: 'download', loaded: before + p.copied, total: f.size }));
+      for (const x of files) {
+        const have = (await llama.list()).find((m) => m.name === x.name && !m.partial);
+        if (!have || have.size !== x.size) {
+          say({ status: 'download', loaded: before, total });
+          await llama.download(x, (p) => say({ status: 'download', loaded: before + p.copied, total }));
           signal?.throwIfAborted();
         }
-        before += part.size;
+        before += x.size;
       }
-      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(f.parts.map((p) => [opfsName(p), model.repo])) });
+      // The drafter is filed under the target's repo, so remove(repo) deletes both.
+      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(files.map((x) => [x.name, model.repo])) });
       say({ status: 'load' });
-      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx }, (p) => say({ status: 'plan', plan: p }));
+      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx, draft: drafter?.name ?? null }, (p) => say({ status: 'plan', plan: p }));
       signal?.throwIfAborted();
     } catch (e) {
       llama.terminate();
@@ -149,6 +161,8 @@ export const diskformerLlamaBackend = {
       task: 'text-generation',
       llama,
       info,
+      // The drafter's file name when llama.cpp speculates with one.
+      drafter: drafter?.name ?? null,
       // llama.cpp hands back text pieces, not token ids, so there are no think ids to report.
       think: null,
       // thinking: false (the default, as the other engines here) renders the template with thinking off, so a model that

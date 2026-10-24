@@ -17,6 +17,7 @@ const GEMMA4_E4B_ONNX = M('onnx-community/gemma-4-E4B-it-ONNX', 'transformers', 
 const MINICPM5_2B = M('openbmb/MiniCPM5-2B-GGUF', 'wllama', 'text-generation', 'chat', { downloadBytes: 1.56e9 });
 const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9 });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
+const NEMOTRON_3_5_BOLT_E4B = M('nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB', 'diskformer-llama', 'text-generation', 'llama-gate', { budget: 5e9, downloadBytes: 6.92e9 });
 const MINILM_L6 = M('Xenova/all-MiniLM-L6-v2', 'transformers', 'feature-extraction', 'embed', { downloadBytes: 90e6 });
 const DETR_RESNET_50 = M('Xenova/detr-resnet-50', 'transformers', 'object-detection', 'detect', { downloadBytes: 167e6 });
 
@@ -42,6 +43,8 @@ export const MODELS = {
     QWEN3_0_6B_MDLM,
     /** 26B parameters in 2.5 GB of GPU memory; 14.4 GB on disk (diskformer). */
     GEMMA4_26B_A4B,
+    /** NVIDIA's dense 4B-effective model with its DFlash drafter (0.74 GB) on diskformer's llama.cpp path; reasons first. */
+    NEMOTRON_3_5_BOLT_E4B,
   },
   /** Chat with images in the messages: content [{ type: 'image', image }, { type: 'text', text }]. Gemma 4 takes audio too. */
   vision: { DEFAULT: QWEN3_5_4B, QWEN3_5_4B, GEMMA4_E2B_ONNX, GEMMA4_E4B_ONNX },
