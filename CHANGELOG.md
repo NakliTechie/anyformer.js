@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.10 — 2026-10-24
+
+### Changed
+- kohra pinned to v0.3.1 (bf95d44): `from_pretrained` reports download progress, which anyformer's `onProgress`
+  receives (forwarded since npm 0.4.9), and caches the graph files in Cache Storage 'kohra-models', which `stored()`
+  lists and `remove()` deletes. A second load of Nemotron-Labs-Diffusion-3B reads them from there.
+
+### Verified
+- npm test 90/90. kohra's own Chrome check on v0.3.1 (kohra session): the first Nemotron load cached all 3 files with
+  their content-length; a reload was ready in 7.4 s with no graph fetches; output unchanged. anyformer's own browser
+  check is owed (the GPU is with Quench), and the npm publish waits for it.
+
 ## 0.4.9 — 2026-10-24
 
 npm 0.4.9 was published from main 69bed78, one commit after tag v0.4.9 (cce1e1a), so it also carries the change

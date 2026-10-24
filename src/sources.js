@@ -6,8 +6,9 @@
 export const PINS = {
   transformers: '4.3.1',
   wllama: '3.4.1',      // LocalMind's pin; its stream-drain workaround (src/backends/wllama.js) is for this version
-  // v0.3.0: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data.
-  kohra: '85e01f0193163b0f2e9696d4f6f5e12b68a277e9',
+  // v0.3.1: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data; download progress
+  // (progress_callback) and the graph files cached in Cache Storage 'kohra-models'.
+  kohra: 'bf95d44c3e3cfc001201baa03fa121c2bf9c7d73',
   // v0.6.8: every engine (the disk-tier MoE engines, Ling 3.0 Flash, and LocalMind's whole-model engines LFM2.5,
   // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/, which loads split GGUFs
   // and drafters, and reads past 2 GiB (Nemotron 3.5 Bolt E4B needs v0.6.8 or later). The hand engines' ingest
