@@ -16,6 +16,9 @@ const Q4_ORT = '1.26.0-dev.20260416-b7804b056c';
 const SPECIAL = {
   nemotron_labs_diffusion: {
     graph: 'onnx/model_kv_q4f16.onnx', opts: { kvCache: true, maskId: 100n, eosId: 11n }, blockCausal: false,
+    // Fast-dLLM decoding: unmask every position at confidence 0.9 or more per step. Same answer in 34 forward passes
+    // where fixed steps took 64 (kohra, primes prompt).
+    threshold: 0.9,
     template: (messages) => {
       const [system, rest] = messages[0]?.role === 'system' ? [messages[0].content, messages.slice(1)] : ['', messages];
       return `<|im_start|>system\n${system}<|im_end|>\n` + rest.map((m) => (m.role === 'assistant'
@@ -69,10 +72,11 @@ export const kohraBackend = {
     return {
       task: 'text-generation',
       // Diffusion fills the whole block at once, so the reply arrives as one chunk.
-      async *generate(messages, { maxNewTokens = 128, steps, signal } = {}) {
+      // threshold: unmask every position at that confidence per step (Fast-dLLM); null runs fixed steps.
+      async *generate(messages, { maxNewTokens = 128, steps, threshold = special?.threshold ?? null, signal } = {}) {
         signal?.throwIfAborted();
         const out = await lm.generate(prompt(text(messages)), {
-          maxNewTokens, steps: steps ?? maxNewTokens, blockCausal, chatTemplate: false, stripThink: true,
+          maxNewTokens, steps: steps ?? maxNewTokens, threshold, blockCausal, chatTemplate: false, stripThink: true,
         });
         yield { text: out.text, tokens: out.tokens, tokPerSec: out.tokensPerSecond };
       },

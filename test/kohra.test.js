@@ -30,6 +30,9 @@ test('kohra: Nemotron-Labs-Diffusion-3B loads its seeded KV graph with its own t
     assert.equal(g.prompt, '<|im_start|>system\n<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n<think></think>Hello.<|im_end|>\n<|im_start|>user\n17 x 23?<|im_end|>\n<|im_start|>assistant\n<think></think>');
     assert.equal(g.o.blockCausal, false);
     assert.equal(g.o.chatTemplate, false);
+    assert.equal(g.o.threshold, 0.9);
+    for await (const _ of s.generate([{ role: 'user', content: 'hi' }], { threshold: null }));
+    assert.equal(fake.calls.filter((c) => c.type === 'generate').at(-1).o.threshold, null);
   } finally {
     kohraBackend.source = was;
   }

@@ -14,7 +14,7 @@ browser storage; no account, no server, no telemetry.
 | How | Command |
 |---|---|
 | npm | `npm install anyformer` |
-| CDN | `import { load } from 'https://cdn.jsdelivr.net/npm/anyformer@0.4.7/+esm';` |
+| CDN | `import { load } from 'https://cdn.jsdelivr.net/npm/anyformer@0.4.8/+esm';` |
 | Copy | `index.js` and `src/`; nothing else is needed |
 
 ```js

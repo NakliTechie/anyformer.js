@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.8 — 2026-10-24
+
+Skips 0.4.7 on npm: this release carries its Nemotron-Labs-Diffusion-3B entry too.
+
+### Changed
+- kohra pinned to v0.3.0 (85e01f0); kohra.js is identical to 0.4.7's pin, 14e430c.
+- Nemotron-Labs-Diffusion-3B decodes with threshold 0.9 by default (Fast-dLLM: unmask every position at that
+  confidence per step); `generate(messages, { threshold: null })` runs fixed steps. kohra measured 34 forward passes
+  against 64 with the same answer.
+
+### Verified
+- Browser (Chrome, M4 Pro, GPU shared with another session): one page, the CPU prompt, 32 tokens, threshold
+  null / 0.9 / null / 0.9: identical text in every run; 7.1 s and 5.8 s at fixed steps, 4.9 s at 0.9. npm test 89/89.
+
 ## 0.4.7 — 2026-10-24
 
 ### Added
