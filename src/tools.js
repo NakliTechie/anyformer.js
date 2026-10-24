@@ -43,7 +43,7 @@ export const TOOLS = [
   },
   {
     name: 'anyformer_models', consequence: 'read',
-    description: 'Models that pass a browser test through anyformer, by family (chat, embedding, objectDetection): repo, back end, task, budget, download size. Pass a repo to anyformer_plan or anyformer_load.',
+    description: 'Models that pass a browser test through anyformer, by family (chat, embedding, objectDetection): repo, back end, task, budget, download size, and the flags diffusion and experimental. Pass a repo to anyformer_plan or anyformer_load.',
     inputSchema: { type: 'object', properties: {} },
     handler: () => MODELS,
   },

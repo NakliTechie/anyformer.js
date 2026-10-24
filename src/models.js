@@ -1,6 +1,8 @@
 // Models that pass a browser test through anyformer, grouped by what they do. Pass an entry to load() in place of a
 // repo id; it carries the task and, where the back end needs one, the budget. DEFAULT is the smallest download that
 // passed. `test` names the page under test/browser/ that proves the entry; test/models.test.js checks it exists.
+// `diffusion: true` marks a text-diffusion model (the reply denoises in blocks); `experimental: true` marks an entry its
+// app shows as opt-in until that app's own checks pass.
 
 const M = (repo, backend, task, test, extra = {}) => ({ repo, backend, task, test, ...extra });
 
@@ -15,8 +17,8 @@ const QWEN3_5_4B = M('onnx-community/Qwen3.5-4B-ONNX-OPT', 'transformers', 'text
 const GEMMA4_E2B_ONNX = M('onnx-community/gemma-4-E2B-it-ONNX', 'transformers', 'text-generation', 'vision', { budget: 3.5e9, downloadBytes: 3.38e9 });
 const GEMMA4_E4B_ONNX = M('onnx-community/gemma-4-E4B-it-ONNX', 'transformers', 'text-generation', 'transformers', { budget: 5.3e9, downloadBytes: 5.18e9 });
 const MINICPM5_2B = M('openbmb/MiniCPM5-2B-GGUF', 'wllama', 'text-generation', 'chat', { downloadBytes: 1.56e9 });
-const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9 });
-const NEMOTRON_DIFFUSION_3B = M('naklitechie/Nemotron-Labs-Diffusion-3B-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 2.77e9 });
+const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9, diffusion: true });
+const NEMOTRON_DIFFUSION_3B = M('naklitechie/Nemotron-Labs-Diffusion-3B-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 2.77e9, diffusion: true, experimental: true });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
 const NEMOTRON_3_5_BOLT_E4B = M('danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU', 'transformers', 'text-generation', 'transformers', { budget: 5e9, downloadBytes: 4.94e9 });
 const MINILM_L6 = M('Xenova/all-MiniLM-L6-v2', 'transformers', 'feature-extraction', 'embed', { downloadBytes: 90e6 });

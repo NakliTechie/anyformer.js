@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.9 — 2026-10-24
+
+### Added
+- Catalog flags: `diffusion: true` on the two kohra entries (Qwen3-0.6B MDLM, Nemotron-Labs-Diffusion-3B), and
+  `experimental: true` on Nemotron-Labs-Diffusion-3B, so LocalMind can show it as opt-in, "experimental · diffusion",
+  until its multi-turn chat check passes (Chirag's conditions for LocalMind, 2026-10-24). `anyformer_models` returns
+  them.
+
+### Verified
+- npm test 90/90. No browser check: catalog fields only.
+
 ## 0.4.8 — 2026-10-24
 
 Skips 0.4.7 on npm: this release carries its Nemotron-Labs-Diffusion-3B entry too.

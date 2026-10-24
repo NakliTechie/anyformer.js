@@ -44,6 +44,12 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
   }
 });
 
+test('diffusion entries run on kohra; Nemotron-Labs-Diffusion-3B is experimental', () => {
+  for (const m of entries) assert.equal(!!m.diffusion, m.backend === 'kohra', m.repo);
+  assert.equal(MODELS.chat.NEMOTRON_DIFFUSION_3B.experimental, true);
+  assert.equal(entries.filter((m) => m.experimental).length, 1);
+});
+
 test('options passed with an entry win over the entry', async () => {
   const model = fromHubInfo(JSON.parse(readFileSync(new URL('./fixtures/google_gemma-4-26B-A4B-it-qat-q4_0-gguf.json', import.meta.url))));
   const p = await plan(MODELS.chat.GEMMA4_26B_A4B, { model, caps, budget: 7e9 });
