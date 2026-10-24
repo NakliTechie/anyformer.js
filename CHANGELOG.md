@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.5 — 2026-10-24
+
+### Changed
+- diskformer pinned to v0.6.8 (3aad103). Its llama.cpp path (ggml/) reads past 2 GiB in a browser, adds head-512
+  attention and loads drafter GGUFs (`draft`). The hand engines (engines/, src/) are unchanged since v0.6.7.
+
+### Verified
+- `llama-gate` on Granite 4.0 H Tiny (Chrome, M4 Pro, v0.6.8 pin): 9/9 identical to diskformer's refs, chat path
+  equal, 19.1 tok/s median. npm test 87/87. Not rerun: the hand-engine gates, because engines/ did not change.
+
 ## 0.4.4 — 2026-10-24
 
 ### Changed
