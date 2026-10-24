@@ -1,7 +1,8 @@
 <!doctype html><meta charset="utf-8"><title>kohra-cache</title>
 <!-- kohra v0.3.1+ through anyformer: the first load reports download bytes through onProgress and leaves the graph
-     files in Cache Storage 'kohra-models'; stored() lists them under kohra; a second load reads them back with no
-     graph fetch and gives the same reply; remove() deletes them. ?repo=<Hub id> (default Nemotron-Labs-Diffusion-3B). -->
+     files in Cache Storage 'kohra-models'; stored() lists them under kohra; a second load reads them back (in under a
+     quarter of the first load's time; Resource Timing cannot see the fetches, since Hugging Face's CDN sends no
+     Timing-Allow-Origin) and gives the same reply; remove() deletes them. ?repo=<Hub id> (default Nemotron-Labs-Diffusion-3B). -->
 <script type="module">
 import { load, stored, remove, kohraBackend } from '../../index.js';
 import { run, log, onTopic } from './harness.js';
@@ -18,10 +19,8 @@ const once = async () => {
   let text = '';
   for await (const c of s.generate(msgs, { maxNewTokens: 32 })) text = c.text;
   s.dispose();
-  const graphFetches = performance.getEntriesByType('resource').filter((r) => /\.onnx(_data(_\d+)?)?$/.test(r.name) && r.transferSize > 0).length;
-  performance.clearResourceTimings();
   const progress = events.filter((e) => e.status === 'progress');
-  return { loadSeconds, text, progressEvents: progress.length, maxLoaded: Math.max(0, ...progress.map((e) => e.loaded)), graphFetches };
+  return { loadSeconds, text, progressEvents: progress.length, maxLoaded: Math.max(0, ...progress.map((e) => e.loaded)) };
 };
 run('kohra-cache', async () => {
   const first = await once();
@@ -34,7 +33,7 @@ run('kohra-cache', async () => {
   const left = (await stored()).some((r) => r.backend === 'kohra' && r.repo === repo);
   return {
     ok: onTopic(first.text) && first.progressEvents > 0 && first.maxLoaded > 1e9 && row?.bytes > 2e9
-      && second.text === first.text && second.graphFetches === 0 && !left,
+      && second.text === first.text && second.loadSeconds < first.loadSeconds / 4 && !left,
     repo, first, second, storedBytes: row?.bytes, freed: gone?.bytes, removed: !left,
   };
 });

@@ -9,8 +9,10 @@
 
 ### Verified
 - npm test 90/90. kohra's own Chrome check on v0.3.1 (kohra session): the first Nemotron load cached all 3 files with
-  their content-length; a reload was ready in 7.4 s with no graph fetches; output unchanged. anyformer's own browser
-  check is owed (the GPU is with Quench), and the npm publish waits for it.
+  their content-length; a reload was ready in 7.4 s with no graph fetches; output unchanged. Through anyformer
+  (`npm run test:browser -- kohra-cache`, Chrome, GPU shared, after the npm publish): the first load sent 35,416
+  progress events to `onProgress` and answered on topic in 200 s; `stored()` listed 2,735,424,112 bytes under kohra;
+  the second load took 5.1 s with the same reply; `remove()` freed 2,752,678,776 bytes (graph and tokenizer).
 
 ## 0.4.9 — 2026-10-24
 
