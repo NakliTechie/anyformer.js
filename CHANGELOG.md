@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (waits for diskformer 0.6.5 on npm, then the pin moves to v0.6.5)
+## Unreleased (waits for diskformer 0.6.6 on npm, then the pin moves to v0.6.6)
 
 ### Added
 - `diskformer-llama` loads split GGUFs (`name-00001-of-0000n.gguf`): `pickGguf` returns a set named by its first part,
