@@ -1,13 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.4.9 — 2026-10-24
 
-### Added
+npm 0.4.9 was published from main 69bed78, one commit after tag v0.4.9 (cce1e1a), so it also carries the change
+below. With the kohra v0.3.0 pin that change does nothing yet: v0.3.0 ignores `progress_callback` and caches nothing.
+
+### Added (69bed78)
 - `kohra`: `onProgress` is forwarded to kohra's `from_pretrained` as `progress_callback` (kohra v0.3.1+), so the
   2.7 GB Nemotron download reports bytes. `stored()` and `remove()` list kohra's Cache Storage 'kohra-models'.
-  Waits on the kohra v0.3.1 pin.
-
-## 0.4.9 — 2026-10-24
 
 ### Added
 - Catalog flags: `diffusion: true` on the two kohra entries (Qwen3-0.6B MDLM, Nemotron-Labs-Diffusion-3B), and
