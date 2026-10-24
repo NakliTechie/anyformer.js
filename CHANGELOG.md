@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.4 — 2026-10-24
+
+### Changed
+- diskformer pinned to v0.6.7 (663b2b0). Its hand engines' ingest (src/ingest.js) now streams the GGUF header with
+  progress, so a slow link no longer goes silent for minutes (Flint at 0.1 MB/s stalled LocalMind's watchdog for 3 min).
+  A range that drops mid-stream, or returns 5xx or 429, resumes from the last byte, up to 6 times. The new events reach
+  `onProgress` as status `weights` with phase `header` or `retry`. diskformer changed only src/ingest.js and its test
+  between v0.6.6 and v0.6.7.
+
+### Verified
+- npm test 87/87. Not run here in a browser: LocalMind's throttled production load of Flint is that check.
+
 ## 0.4.3 — 2026-10-24
 
 npm skips 0.4.2: this release carries it (Flint 40B and LFM2.5 24B on the hand engines).

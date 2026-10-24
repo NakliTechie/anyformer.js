@@ -1,6 +1,6 @@
 {
   "name": "anyformer",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "One call to run a model in a browser tab: anyformer reads the Hub repo, probes the browser, and picks the back end (transformers.js, LocalMind's WebGPU kernels, diskformer, kohra) that fits the model's format, architecture and your GPU budget.",
   "type": "module",
   "main": "./index.js",
