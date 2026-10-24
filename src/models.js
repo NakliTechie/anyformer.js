@@ -21,6 +21,10 @@ const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra',
 const NEMOTRON_DIFFUSION_3B = M('naklitechie/Nemotron-Labs-Diffusion-3B-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 2.77e9, diffusion: true, experimental: true });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
 const NEMOTRON_3_5_BOLT_E4B = M('danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU', 'transformers', 'text-generation', 'transformers', { budget: 5e9, downloadBytes: 4.94e9 });
+// A tech demo, not a gated model: 231 GB on disk (4 IQ1_M parts plus the 110.6 GB Engram side file), about 0.4 tok/s.
+// diskformer checked one hand-written prompt through complete(); generate() renders the GGUF's chat template, which no
+// browser run has checked.
+const DEEPSEEK_V4_1_FLASH = M('ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF', 'diskformer-llama', 'text-generation', 'llama-gate', { budget: 8e9, downloadBytes: 231316411072, experimental: true });
 const MINILM_L6 = M('Xenova/all-MiniLM-L6-v2', 'transformers', 'feature-extraction', 'embed', { downloadBytes: 90e6 });
 const DETR_RESNET_50 = M('Xenova/detr-resnet-50', 'transformers', 'object-detection', 'detect', { downloadBytes: 167e6 });
 
@@ -50,6 +54,8 @@ export const MODELS = {
     GEMMA4_26B_A4B,
     /** NVIDIA's Nemotron 3.5 Bolt E4B (dense, text only), a community q4f16 ONNX export in Gemma 4 E4B's graph. */
     NEMOTRON_3_5_BOLT_E4B,
+    /** DeepSeek V4.1 Flash (763B MoE), a tech demo on diskformer's llama.cpp path: 231 GB on disk, very slow. */
+    DEEPSEEK_V4_1_FLASH,
   },
   /** Chat with images in the messages: content [{ type: 'image', image }, { type: 'text', text }]. Gemma 4 takes audio too. */
   vision: { DEFAULT: QWEN3_5_4B, QWEN3_5_4B, GEMMA4_E2B_ONNX, GEMMA4_E4B_ONNX },

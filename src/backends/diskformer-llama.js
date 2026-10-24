@@ -35,11 +35,29 @@ export const CHECKED_FILES = [
 
 const SPLIT = /-(\d{5})-of-(\d{5})\.gguf$/i;
 
-// The GGUF to load, as { name, size, parts: [{ name, size }] }: the language model (no mmproj vision tower), one file or
-// every part of a split set (name-00001-of-0000n.gguf, named by its first part; size is the sum). The caller's file
-// when given; else the file diskformer checked; else the preferred quant, a single file before a split set.
+// Side files a model opens beside its GGUF (llama.load({ extra }), diskformer v0.6.9+), keyed by the GGUF's file name:
+// they download with its parts, count toward its disk bytes, and are never picked as the model itself. DeepSeek V4.1
+// Flash is a tech demo in diskformer (docs/coverage.md: one prompt identical to native in Chrome, about 0.4 tok/s, the
+// chat template not checked), so its architecture is accepted for this file only, not added to LLAMA_ARCHITECTURES.
+export const SIDE_FILES = {
+  'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00004.gguf': { architecture: 'deepseek41-engram', files: ['DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf'] },
+};
+const SIDE_NAMES = new Set(Object.values(SIDE_FILES).flatMap((s) => s.files));
+
+// The GGUF to load, as { name, size, parts: [{ name, size }], extra: [{ name, size }] }: the language model (no mmproj
+// vision tower), one file or every part of a split set (name-00001-of-0000n.gguf, named by its first part), and its
+// side files (SIDE_FILES); size is the sum of all of them. The caller's file when given; else the file diskformer
+// checked; else the preferred quant, a single file before a split set. A model missing a side file cannot load.
 export function pickGguf(model, file = null) {
-  const lms = model.files.gguf.filter((f) => !/mmproj/i.test(f.name));
+  const lms = model.files.gguf.filter((f) => !/mmproj/i.test(f.name) && !SIDE_NAMES.has(opfsName(f)));
+  const f = pickModel(lms, file);
+  if (!f) return null;
+  const extra = (SIDE_FILES[opfsName(f)]?.files || []).map((n) => model.files.gguf.find((x) => opfsName(x) === n));
+  if (extra.some((x) => !x)) return null;
+  return { ...f, size: f.size + extra.reduce((n, x) => n + x.size, 0), extra };
+}
+
+function pickModel(lms, file) {
   const sets = new Map();
   for (const f of lms.filter((x) => SPLIT.test(x.name))) {
     const base = f.name.replace(SPLIT, '');
@@ -54,7 +72,7 @@ export function pickGguf(model, file = null) {
     }),
   ];
   if (file) return candidates.find((f) => f.name === file) || null;
-  const checked = candidates.find((f) => CHECKED_FILES.includes(opfsName(f)));
+  const checked = candidates.find((f) => CHECKED_FILES.includes(opfsName(f)) || SIDE_FILES[opfsName(f)]);
   if (checked) return checked;
   for (const q of QUANTS) {
     const f = candidates.find((x) => new RegExp(`(^|[-_.])${q}([-_.]|$)`, 'i').test(x.name.replace(SPLIT, '').replace(/\.gguf$/i, '')));
@@ -101,8 +119,9 @@ export const diskformerLlamaBackend = {
   canRun(model, caps, { budget, task, file = null }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
     if (task && !diskformerLlamaBackend.tasks.includes(task)) return { ok: false, code: 'task', reason: `task ${task}; diskformer's llama.cpp path runs text generation only` };
-    if (!LLAMA_ARCHITECTURES.includes(model.architecture)) return { ok: false, code: 'model', reason: `architecture ${model.architecture || 'unknown'} is not one diskformer's llama.cpp path has checked (${LLAMA_ARCHITECTURES.join(', ')})` };
     const f = pickGguf(model, file);
+    const demo = f && SIDE_FILES[opfsName(f)]?.architecture === model.architecture;
+    if (!LLAMA_ARCHITECTURES.includes(model.architecture) && !demo) return { ok: false, code: 'model', reason: `architecture ${model.architecture || 'unknown'} is not one diskformer's llama.cpp path has checked (${LLAMA_ARCHITECTURES.join(', ')})` };
     if (!f) return { ok: false, code: 'model', reason: file ? `${file} is not a language-model GGUF in the repo (a split set is named by its first part, with every part present)` : `no GGUF at ${QUANTS.join(', ')} in the repo (a split set needs every part)` };
     if (!caps.webgpu) return { ok: false, code: 'webgpu', reason: 'no WebGPU adapter' };
     if (!caps.memory64 || !caps.jspi) return { ok: false, code: 'webgpu', reason: 'the llama.cpp build needs wasm memory64 and JSPI (Chrome or Edge 137+)' };
@@ -121,9 +140,10 @@ export const diskformerLlamaBackend = {
     signal?.addEventListener('abort', stop, { once: true });
     let info;
     try {
-      // Each part downloads under its own name; progress counts bytes over the whole set.
+      // Each part and side file downloads under its own name; progress counts bytes over all of them.
+      const files = [...f.parts, ...f.extra];
       let before = 0;
-      for (const part of f.parts) {
+      for (const part of files) {
         const name = opfsName(part);
         const have = (await llama.list()).find((m) => m.name === name && !m.partial);
         if (!have || have.size !== part.size) {
@@ -134,9 +154,9 @@ export const diskformerLlamaBackend = {
         }
         before += part.size;
       }
-      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(f.parts.map((p) => [opfsName(p), model.repo])) });
+      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(files.map((p) => [opfsName(p), model.repo])) });
       say({ status: 'load' });
-      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx }, (p) => say({ status: 'plan', plan: p }));
+      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx, extra: f.extra.map(opfsName) }, (p) => say({ status: 'plan', plan: p }));
       signal?.throwIfAborted();
     } catch (e) {
       llama.terminate();

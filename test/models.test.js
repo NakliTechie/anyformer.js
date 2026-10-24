@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { MODELS, BACKENDS, plan, fromHubInfo } from '../index.js';
 
 const entries = Object.values(MODELS).flatMap((family) => Object.values(family));
-const caps = { webgpu: true, f16: true, subgroups: true, opfs: true };
+const caps = { webgpu: true, f16: true, subgroups: true, opfs: true, memory64: true, jspi: true };
 
 test('every MODELS entry names a registered back end and an existing browser test page', () => {
   for (const m of entries) {
@@ -32,6 +32,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
     'danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU': 'danyalmalik_NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU',
     'naklitechie/Nemotron-Labs-Diffusion-3B-ONNX': 'naklitechie_Nemotron-Labs-Diffusion-3B-ONNX',
+    'ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF': 'ISTA-DASLab_DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
     'Xenova/detr-resnet-50': 'Xenova_detr-resnet-50',
   };
@@ -44,10 +45,11 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
   }
 });
 
-test('diffusion entries run on kohra; Nemotron-Labs-Diffusion-3B is experimental', () => {
+test('diffusion entries run on kohra; Nemotron-Labs-Diffusion-3B and DeepSeek V4.1 Flash are experimental', () => {
   for (const m of entries) assert.equal(!!m.diffusion, m.backend === 'kohra', m.repo);
   assert.equal(MODELS.chat.NEMOTRON_DIFFUSION_3B.experimental, true);
-  assert.equal(entries.filter((m) => m.experimental).length, 1);
+  assert.equal(MODELS.chat.DEEPSEEK_V4_1_FLASH.experimental, true);
+  assert.equal(entries.filter((m) => m.experimental).length, 2);
 });
 
 test('options passed with an entry win over the entry', async () => {

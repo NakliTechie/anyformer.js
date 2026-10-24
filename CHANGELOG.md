@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.11 — 2026-10-24
+
+### Added
+- `MODELS.chat.DEEPSEEK_V4_1_FLASH`: DeepSeek V4.1 Flash (763B MoE, ISTA-DASLab GSQ-RCO IQ1_M) on `diskformer-llama`,
+  budget 8 GB, `experimental: true`, so LocalMind shows it as an opt-in tech demo (Chirag's approval, relayed by the
+  LocalMind session). 231,316,411,072 bytes on disk: 4 parts plus the 110.6 GB Engram file. Very slow: diskformer
+  measured about 0.4 tok/s natively from a USB SSD.
+- `diskformer-llama`: side files (`SIDE_FILES`). A model's side file downloads with its parts under its own name,
+  counts toward the disk bytes, goes to llama.cpp as `load({ extra })`, and is never picked as the model. The
+  `deepseek41-engram` architecture is accepted for the demo file only; another quant in the repo is refused.
+
+### Changed
+- diskformer pinned to v0.6.9 (53c976e), which adds `load({ extra })`. diskformer reports Granite and Bolt 9/9 on it.
+
+### Verified
+- npm test 92/92 (fixture of the repo at cb02422c: the IQ1_M set with its side file, no Engram file alone, a missing
+  side file refuses, `extra` reaches the fake llama.js). `plan()` against the live Hub picks `diskformer-llama` at 8 GB
+  with 231,316,411,072 disk bytes.
+- Not run, on purpose (Chirag: no live runs or benchmarks of this model): any browser load through anyformer.
+  diskformer checked one hand-written prompt through `complete()` in Chrome; the chat-template path that `generate()`
+  uses, and so LocalMind's chat, has not run in any browser.
+
 ## 0.4.10 — 2026-10-24
 
 ### Changed

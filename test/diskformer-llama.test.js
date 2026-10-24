@@ -115,3 +115,50 @@ test('diskformer-llama: load downloads each part of a split set under its own na
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: was.navigator });
   }
 });
+
+const deepseek = fixture('ISTA-DASLab_DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF');
+
+test('diskformer-llama: DeepSeek V4.1 Flash picks the IQ1_M set with its Engram side file, never the side file alone', () => {
+  const f = pickGguf(deepseek);
+  assert.equal(f.name, 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00004.gguf');
+  assert.equal(f.parts.length, 4);
+  assert.deepEqual(f.extra.map((x) => x.name), ['DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf']);
+  assert.equal(f.size, 231316411072);
+  assert.equal(pickGguf(deepseek, 'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf'), null);
+  const r = diskformerLlamaBackend.canRun(deepseek, full, { budget: 8e9 });
+  assert.equal(r.ok, true);
+  assert.equal(r.estimate.diskBytes, 231316411072);
+  // The architecture is accepted for the demo file only: another quant of the same repo is refused.
+  assert.equal(diskformerLlamaBackend.canRun(deepseek, full, { budget: 8e9, file: 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XS-00001-of-00004.gguf' }).code, 'model');
+  // Without the side file the set cannot load.
+  const noEngram = hub(deepseek.repo, 'deepseek41-engram', deepseek.files.gguf.filter((x) => !/Engram/.test(x.name)).map((x) => [x.name, x.size]));
+  assert.equal(diskformerLlamaBackend.canRun(noEngram, full, { budget: 8e9 }).ok, false);
+});
+
+test('diskformer-llama: load downloads the side file with the parts and passes it to llama.load as extra', async () => {
+  const fake = await import('./fixtures/fake-engines/llama.js');
+  fake.calls.length = 0;
+  const was = { source: diskformerLlamaBackend.source, navigator: globalThis.navigator };
+  const files = new Map();
+  const handle = (name) => ({
+    getFile: async () => ({ text: async () => files.get(name) ?? (() => { throw new Error('none'); })() }),
+    createWritable: async () => ({ write: async (t) => files.set(name, t), close: async () => {} }),
+  });
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { storage: { getDirectory: async () => ({ getFileHandle: async (n) => handle(n) }) } } });
+  diskformerLlamaBackend.source = new URL('./fixtures/fake-engines/llama.js', import.meta.url).href;
+  try {
+    const s = await diskformerLlamaBackend.load(deepseek, { budget: 8e9 });
+    const downloads = fake.calls.filter((c) => c.type === 'download').map((d) => d.name);
+    assert.equal(downloads.length, 5);
+    assert.equal(downloads.at(-1), 'DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf');
+    const load = fake.calls.find((c) => c.type === 'load');
+    assert.equal(load.name, 'DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00004.gguf');
+    assert.deepEqual(load.extra, ['DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf']);
+    assert.equal(load.budget, 8e9);
+    assert.equal(Object.keys(JSON.parse(files.get('anyformer-llama.json'))).length, 5);
+    s.dispose();
+  } finally {
+    diskformerLlamaBackend.source = was.source;
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: was.navigator });
+  }
+});
