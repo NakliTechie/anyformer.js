@@ -36,8 +36,10 @@ export const CHECKED_FILES = [
 const SPLIT = /-(\d{5})-of-(\d{5})\.gguf$/i;
 
 // Drafters diskformer has checked for a target GGUF (ggml/chat.html CATALOG at the pinned commit), keyed by the
-// target's file name. The drafter downloads beside the target and llama.cpp speculates with it; replies stay
-// greedy-identical (Nemotron 3.5 Bolt E4B + DFlash: 9/9 against plain greedy and llama-server on WebGPU).
+// target's file name. With speculative: true the drafter downloads beside the target and llama.cpp speculates with
+// it; replies stay greedy-identical (Nemotron 3.5 Bolt E4B + DFlash: 9/9 against plain greedy and llama-server on
+// WebGPU). Off by default, because on WebGPU it is slower: Bolt 24.7 tok/s with the drafter, 30.0 without (Chrome,
+// diskformer), since a 4-token verify costs about 3 single decodes.
 export const DRAFTERS = {
   'Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf': { repo: 'nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB-DFlash', name: 'Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf', size: 736812096 },
 };
@@ -115,14 +117,14 @@ export const diskformerLlamaBackend = {
     if (!caps.memory64 || !caps.jspi) return { ok: false, code: 'webgpu', reason: 'the llama.cpp build needs wasm memory64 and JSPI (Chrome or Edge 137+)' };
     if (!caps.opfs) return { ok: false, code: 'opfs', reason: 'no OPFS (navigator.storage.getDirectory)' };
     // The budget is not checked here: llama.cpp plans its expert slots from it at load time, and refuses there.
-    return { ok: true, estimate: { gpuBytes: budget, diskBytes: f.size + (DRAFTERS[opfsName(f)]?.size ?? 0), tokPerSec: null } };
+    return { ok: true, estimate: { gpuBytes: budget, diskBytes: f.size, tokPerSec: null } };
   },
 
   // maxCtx sizes the KV cache; 1024 is the context diskformer's gates run at.
-  // speculative: false loads the target alone; otherwise a model with a checked drafter (DRAFTERS) loads it too.
+  // speculative: true also loads the model's checked drafter (DRAFTERS); otherwise the target loads alone.
   async load(model, { budget, file = null, maxCtx = 1024, speculative, onProgress, signal }) {
     const f = pickGguf(model, file);
-    const drafter = speculative === false ? null : DRAFTERS[opfsName(f)] ?? null;
+    const drafter = speculative === true ? DRAFTERS[opfsName(f)] ?? null : null;
     // The drafter is one more file to fetch; it lives in its own repo.
     const files = [...f.parts.map((p) => ({ name: opfsName(p), size: p.size, url: diskformerLlamaBackend.url(model, p) })),
       ...(drafter ? [{ name: drafter.name, size: drafter.size, url: diskformerLlamaBackend.url({ ...model, repo: drafter.repo, revision: null }, drafter) }] : [])];

@@ -43,7 +43,7 @@ export const MODELS = {
     QWEN3_0_6B_MDLM,
     /** 26B parameters in 2.5 GB of GPU memory; 14.4 GB on disk (diskformer). */
     GEMMA4_26B_A4B,
-    /** NVIDIA's dense 4B-effective model with its DFlash drafter (0.74 GB) on diskformer's llama.cpp path; reasons first. */
+    /** NVIDIA's dense 4B-effective model on diskformer's llama.cpp path, 30 tok/s; reasons first. Its DFlash drafter loads with speculative: true (slower on WebGPU). */
     NEMOTRON_3_5_BOLT_E4B,
   },
   /** Chat with images in the messages: content [{ type: 'image', image }, { type: 'text', text }]. Gemma 4 takes audio too. */

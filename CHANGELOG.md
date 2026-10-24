@@ -4,12 +4,12 @@
 
 ### Added
 - Nemotron 3.5 Bolt E4B (`MODELS.chat.NEMOTRON_3_5_BOLT_E4B`, nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB, Q4_K_M,
-  6.18 GB) on `diskformer-llama` at a 5 GB budget, with its DFlash drafter (Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf,
-  0.74 GB, from the -DFlash repo). It is dense; it comes to diskformer only because of the drafter.
-- `diskformer-llama` drafters: `DRAFTERS` maps a target GGUF to the drafter diskformer checked. The drafter downloads
-  beside the target, is filed under the target's repo (so `remove(repo)` deletes both), and llama.cpp loads with it
-  (`draft`). `speculative: false` loads the target alone. `session.drafter` names the drafter file. Disk estimates
-  include it.
+  6.18 GB) on `diskformer-llama` at a 5 GB budget. It is dense; it comes to diskformer because of its DFlash drafter
+  (Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf, 0.74 GB, from the -DFlash repo).
+- `diskformer-llama` drafters, off by default: `DRAFTERS` maps a target GGUF to the drafter diskformer checked, and
+  `load(..., { speculative: true })` downloads it beside the target, files it under the target's repo (so
+  `remove(repo)` deletes both) and loads with it (`draft`). `session.drafter` names the drafter file. Off because on
+  WebGPU the drafter is slower: Bolt 24.7 tok/s with it, 30.0 without, replies 9/9 identical (diskformer, Chrome).
 
 ## 0.4.4 — 2026-10-24
 

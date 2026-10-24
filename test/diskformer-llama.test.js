@@ -118,8 +118,8 @@ test('diskformer-llama: load downloads each part of a split set under its own na
   }
 });
 
-test('diskformer-llama: a model with a checked drafter downloads it beside the target and loads with it; speculative: false skips it', async () => {
-  assert.equal(diskformerLlamaBackend.canRun(bolt, full, { budget: 5e9 }).estimate.diskBytes, 6180446208 + 736812096);
+test('diskformer-llama: the drafter is off by default; speculative: true downloads it beside the target and loads with it', async () => {
+  assert.equal(diskformerLlamaBackend.canRun(bolt, full, { budget: 5e9 }).estimate.diskBytes, 6180446208);
   const fake = await import('./fixtures/fake-engines/llama.js');
   const was = { source: diskformerLlamaBackend.source, navigator: globalThis.navigator };
   const files = new Map();
@@ -131,11 +131,17 @@ test('diskformer-llama: a model with a checked drafter downloads it beside the t
   diskformerLlamaBackend.source = new URL('./fixtures/fake-engines/llama.js', import.meta.url).href;
   try {
     fake.calls.length = 0;
+    const plain = await diskformerLlamaBackend.load(bolt, { budget: 5e9 });
+    assert.deepEqual(fake.calls.filter((c) => c.type === 'download').map((d) => d.name), ['Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf']);
+    assert.equal(fake.calls.find((c) => c.type === 'load').draft, null);
+    assert.equal(plain.drafter, null);
+    plain.dispose();
+    fake.calls.length = 0;
     const seen = [];
-    const s = await diskformerLlamaBackend.load(bolt, { budget: 5e9, onProgress: (e) => seen.push(e) });
+    const s = await diskformerLlamaBackend.load(bolt, { budget: 5e9, speculative: true, onProgress: (e) => seen.push(e) });
     const downloads = fake.calls.filter((c) => c.type === 'download');
-    assert.deepEqual(downloads.map((d) => d.name), ['Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf', 'Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf']);
-    assert.match(downloads[1].url, /nvidia\/NVIDIA-Nemotron-3\.5-Bolt-E4B-4GB-DFlash\/resolve\/main\/Nemotron-3\.5-Bolt-E4B-DFlash-BF16\.gguf$/);
+    assert.deepEqual(downloads.map((d) => d.name), ['Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf']);   // the target is stored
+    assert.match(downloads[0].url, /nvidia\/NVIDIA-Nemotron-3\.5-Bolt-E4B-4GB-DFlash\/resolve\/main\/Nemotron-3\.5-Bolt-E4B-DFlash-BF16\.gguf$/);
     const load = fake.calls.find((c) => c.type === 'load');
     assert.equal(load.name, 'Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf');
     assert.equal(load.draft, 'Nemotron-3.5-Bolt-E4B-DFlash-BF16.gguf');
@@ -143,12 +149,6 @@ test('diskformer-llama: a model with a checked drafter downloads it beside the t
     assert.equal(seen.filter((e) => e.status === 'download').at(-1).loaded, 6180446208 + 736812096);
     assert.deepEqual(Object.values(JSON.parse(files.get('anyformer-llama.json'))), [bolt.repo, bolt.repo]);   // remove(repo) takes both
     s.dispose();
-    fake.calls.length = 0;
-    const plain = await diskformerLlamaBackend.load(bolt, { budget: 5e9, speculative: false });
-    assert.equal(fake.calls.filter((c) => c.type === 'download').length, 0);   // both already stored
-    assert.equal(fake.calls.find((c) => c.type === 'load').draft, null);
-    assert.equal(plain.drafter, null);
-    plain.dispose();
   } finally {
     diskformerLlamaBackend.source = was.source;
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: was.navigator });
