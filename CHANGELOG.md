@@ -1,16 +1,23 @@
 # Changelog
 
-## Unreleased (waits for diskformer 0.6.6 on npm, then the pin moves to v0.6.6)
+## 0.4.3 — 2026-10-24
+
+npm skips 0.4.2: this release carries it (Flint 40B and LFM2.5 24B on the hand engines).
 
 ### Added
 - `diskformer-llama` loads split GGUFs (`name-00001-of-0000n.gguf`): `pickGguf` returns a set named by its first part,
   with every part and their summed size; a set missing a part is refused. Each part downloads into OPFS under its own
   file name and `load` names the first, as diskformer v0.6.5's worker expects. Ling 3.0 Flash (77 GB, 2 parts) now
   routes to the llama.cpp path under the hand engine's 6.8 GB floor (diskformer v0.6.5: 6 GB, 4.1–4.9 tok/s, 6/9 vs
-  llama.cpp on the CPU) and stays on the hand engine above it. Node-tested; not yet run through anyformer in a browser.
+  llama.cpp on the CPU) and stays on the hand engine above it. Ling 3.0 Flash through anyformer in a browser is not yet run.
 
 ### Changed
+- diskformer pinned to v0.6.6 (e07e129), whose llama.cpp worker loads split GGUFs.
 - OPFS names for llama.cpp's GGUFs drop the repo's folders (gguf/<file name>); a file in a repo subfolder failed before.
+
+### Verified
+- Granite 4.0 H Tiny through `diskformer-llama` on v0.6.6, Chrome on the M4 Pro: 9/9 replies identical to llama.cpp, chat path equal to the reference.
+- LocalMind's checks: through 0.4.1, LFM2.5 230M, Gemma 4 E2B and Ternary Bonsai 2 27B gave identical replies on 21/21 rows in both run orders, with decode within run-to-run spread; through 0.4.2, Flint 40B and LFM2.5 24B gave identical replies 3/3 in four runs, with equal GPU memory and equal or faster decode.
 
 ## 0.4.2 — 2026-10-23
 
