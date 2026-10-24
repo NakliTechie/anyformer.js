@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.7 — 2026-10-24
+
+### Added
+- Nemotron-Labs-Diffusion-3B (`MODELS.chat.NEMOTRON_DIFFUSION_3B`, naklitechie/Nemotron-Labs-Diffusion-3B-ONNX) on
+  `kohra`: the q4f16 seeded block-KV graph (onnx/model_kv_q4f16.onnx, 2.73 GB with its two data files), mask id 100,
+  EOS 11, and Nemotron's chat template over the whole conversation (a system turn, an empty think block before each
+  assistant reply). Content blocks are joined as text.
+
+### Changed
+- kohra pinned to main 14e430c (after v0.2.1; kohra.js changed in afee5f4): seeded KV graphs, `chatFormat`, graphs
+  whose data is split into `_data`, `_data_1`.
+
+### Verified
+- Browser (Chrome, M4 Pro): `npm run test:browser -- kohra --query "repo=naklitechie/Nemotron-Labs-Diffusion-3B-ONNX"`
+  answered on topic (32 tokens, 5.0 tok/s, load 156 s with the download); `npm run test:browser -- kohra` (Qwen3-0.6B
+  MDLM) on the new pin answered on topic. npm test 89/89.
+
 ## 0.4.6 — 2026-10-24
 
 Skips 0.4.5 on npm: this release carries its diskformer v0.6.8 pin too.
