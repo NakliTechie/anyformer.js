@@ -2,6 +2,7 @@
 // importing anyformer costs nothing until this back end is chosen.
 
 
+import { AnyformerError } from '../errors.js';
 import { SOURCES } from '../sources.js';
 
 // dtype → the ONNX file transformers.js reads for it (decoder-only repos keep one graph per dtype under onnx/).
@@ -31,6 +32,18 @@ function pickMmDtype(model, caps) {
   return order.find((d) => have.has(`onnx/decoder_model_merged${MM_SUFFIX[d]}.onnx`)) || null;
 }
 const mmBytes = (model, dtype) => mmModules(model).reduce((n, m) => n + graphBytes(model, `onnx/${m}${MM_SUFFIX[dtype]}.onnx`), 0);
+// A text-only export in the multimodal layout (embed_tokens + decoder_model_merged, no vision or audio encoder), e.g.
+// danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU: loads through the causal-LM class and the tokenizer, as
+// LocalMind does, since there is no processor.
+const CAUSAL = { gemma4: 'Gemma4ForCausalLM' };
+const textOnly = (model) => model.architecture in CAUSAL && !mmModules(model).some((m) => /^(vision|audio)_encoder$/.test(m));
+// How many external-data files each graph has (<graph>_data, <graph>_data_1 …), keyed as transformers.js_config's
+// use_external_data_format is: a repo whose config.json lacks that block fails to mount the data without it. The
+// counts equal the config's in onnx-community's Gemma 4 E2B and Qwen3.5 4B repos.
+const externalData = (model, dtype) => Object.fromEntries(mmModules(model).map((m) => {
+  const file = `onnx/${m}${MM_SUFFIX[dtype]}.onnx`;
+  return [file.slice(5), model.files.all.filter((f) => f.name.startsWith(`${file}_data`)).length];
+}).filter(([, n]) => n > 0));
 const isMultimodal = (model) => model.architecture in MULTIMODAL && model.files.onnx.some((f) => f.name.startsWith('onnx/decoder_model_merged'));
 // The chat tasks a multimodal repo is tagged with on the Hub; all run here as chat.
 const MM_TASKS = ['text-generation', 'image-text-to-text', 'any-to-any'];
@@ -100,6 +113,7 @@ export const transformersBackend = {
     const want = task || model.task || 'text-generation';
     const lib = await import(transformersBackend.source);
     const progress_callback = onProgress && ((p) => onProgress({ backend: 'transformers', ...p }));
+    if (isMultimodal(model) && textOnly(model)) return loadCausal(lib, model, forced || pickMmDtype(model, caps), { progress_callback, signal });
     if (isMultimodal(model)) return loadMultimodal(lib, model, forced || pickMmDtype(model, caps), { progress_callback, signal });
     if (want !== 'text-generation') return loadPipeline(lib, model, want, { progress_callback, signal });
     const dtype = forced || pickDtype(model, caps);
@@ -154,6 +168,34 @@ async function* stream(lib, tokenizer, signal, run) {
     await new Promise((r) => { wake = r; });
   }
   if (failed) throw failed;
+}
+
+// A text-only model in the multimodal layout: the causal-LM class over embed_tokens + decoder_model_merged.
+async function loadCausal(lib, model, dtype, { progress_callback, signal }) {
+  const opts = { revision: model.revision || 'main', progress_callback };
+  const tokenizer = await lib.AutoTokenizer.from_pretrained(model.repo, opts);
+  const net = await lib[CAUSAL[model.architecture]].from_pretrained(model.repo, {
+    ...opts, dtype, device: 'webgpu', use_external_data_format: externalData(model, dtype),
+  });
+  signal?.throwIfAborted();
+  return {
+    task: 'text-generation',
+    generate: (messages, { maxNewTokens = 256, repetitionPenalty, signal } = {}) => stream(lib, tokenizer, signal, (streamer, stopping_criteria) => {
+      const inputs = tokenizer.apply_chat_template(textMessages(messages), { add_generation_prompt: true, enable_thinking: false, return_dict: true });
+      return net.generate({ ...inputs, max_new_tokens: maxNewTokens, do_sample: false, ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), streamer, stopping_criteria });
+    }),
+    dispose: () => net.dispose?.(),
+  };
+}
+
+// Text blocks joined; a text-only model refuses any other block.
+function textMessages(messages) {
+  return messages.map((m) => {
+    if (typeof m.content === 'string') return m;
+    const other = m.content.find((b) => b.type !== 'text');
+    if (other) throw new AnyformerError('INVALID_ARGUMENT', `this model reads text only; got a ${other.type} block`);
+    return { ...m, content: m.content.map((b) => b.text).join('\n') };
+  });
 }
 
 // A multimodal chat model. Message content is a string or an array of blocks: { type: 'text', text },

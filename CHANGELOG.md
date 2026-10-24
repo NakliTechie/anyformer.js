@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.6 — 2026-10-24
+
+Skips 0.4.5 on npm: this release carries its diskformer v0.6.8 pin too.
+
+### Added
+- Nemotron 3.5 Bolt E4B (`MODELS.chat.NEMOTRON_3_5_BOLT_E4B`) on `transformers` at a 5 GB budget:
+  danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU, a community q4f16 export (Bolt's weights in onnx-community's
+  Gemma 4 E4B graph), text only, 4.91 GB.
+- `transformers`: a Gemma 4 repo in the multimodal layout with no vision or audio encoder loads through
+  `Gemma4ForCausalLM` and the tokenizer. Its `use_external_data_format` comes from the repo's `_data` files, because
+  that repo's config.json has no transformers.js_config (without it: "Module.MountedFiles is not available"). Image
+  and audio blocks are refused with `INVALID_ARGUMENT`.
+
+### Verified
+- Browser (Chrome, M4 Pro): `npm run test:browser -- transformers --query "repo=danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU&budget=5.3"`
+  answered on topic, 34.9 tok/s, load 231 s with the download. npm test 88/88.
+
 ## 0.4.5 — 2026-10-24
 
 ### Changed

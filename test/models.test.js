@@ -30,6 +30,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'openbmb/MiniCPM5-2B-GGUF': 'openbmb_MiniCPM5-2B-GGUF',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
+    'danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU': 'danyalmalik_NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
     'Xenova/detr-resnet-50': 'Xenova_detr-resnet-50',
   };
