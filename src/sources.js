@@ -7,9 +7,9 @@ export const PINS = {
   transformers: '4.3.1',
   wllama: '3.4.1',      // LocalMind's pin; its stream-drain workaround (src/backends/wllama.js) is for this version
   kohra: 'f678fac7342c79b58b640540b8b3a7d078b7ab1a',
-  // v0.6.4: every engine (the disk-tier MoE engines, Ling 3.0 Flash, and LocalMind's whole-model engines LFM2.5,
-  // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/.
-  diskformer: '095ab2058be9de56841c51b9369ba556d625392b',
+  // v0.6.6: every engine (the disk-tier MoE engines, Ling 3.0 Flash, and LocalMind's whole-model engines LFM2.5,
+  // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/, which loads split GGUFs.
+  diskformer: 'e07e12975df054b073672ba2060d0d2c5571dbcd',
 };
 
 const gh = (repo, sha, path) => `https://cdn.jsdelivr.net/gh/NakliTechie/${repo}@${sha}/${path}`;
