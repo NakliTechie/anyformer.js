@@ -15,7 +15,9 @@ test('kohra: Nemotron-Labs-Diffusion-3B loads its seeded KV graph with its own t
   const was = kohraBackend.source;
   kohraBackend.source = new URL('./fixtures/fake-engines/kohra.js', import.meta.url).href;
   try {
-    const s = await kohraBackend.load(nemotron, { caps });
+    const seen = [];
+    const s = await kohraBackend.load(nemotron, { caps, onProgress: (e) => seen.push(e) });
+    assert.deepEqual(seen.at(-1), { backend: 'kohra', status: 'progress', file: 'model_kv_q4f16.onnx_data', loaded: 1, total: 2, progress: 50 });
     const { opts } = fake.calls.find((c) => c.type === 'load');
     assert.match(opts.model, /\/resolve\/[^/]+\/onnx\/model_kv_q4f16\.onnx$/);
     assert.equal(opts.kvCache, true);

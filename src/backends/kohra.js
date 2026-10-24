@@ -65,6 +65,9 @@ export const kohraBackend = {
     const special = SPECIAL[model.architecture];
     const lm = await DiffusionLM.from_pretrained({
       model: `${base}/${graph}`, tokenizer: model.repo, ...(graph === Q4 && { ortVersion: Q4_ORT }), ...special?.opts,
+      // kohra v0.3.1+: transformers.js-style events ({ status: 'initiate' | 'progress' | 'done', file, loaded, total,
+      // progress }) while the graph and its data download into Cache Storage 'kohra-models'. Older kohra ignores it.
+      ...(onProgress && { progress_callback: (p) => onProgress({ backend: 'kohra', ...p }) }),
     });
     signal?.throwIfAborted();
     const blockCausal = special ? special.blockCausal : model.tags.includes('block-diffusion');

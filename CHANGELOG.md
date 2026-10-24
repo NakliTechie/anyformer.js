@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `kohra`: `onProgress` is forwarded to kohra's `from_pretrained` as `progress_callback` (kohra v0.3.1+), so the
+  2.7 GB Nemotron download reports bytes. `stored()` and `remove()` list kohra's Cache Storage 'kohra-models'.
+  Waits on the kohra v0.3.1 pin.
+
 ## 0.4.9 — 2026-10-24
 
 ### Added

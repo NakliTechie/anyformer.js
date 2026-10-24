@@ -3,8 +3,8 @@
 // inventoryModelCaches() (index.html), which covers the same engines' stores.
 //   Cache Storage   'transformers-cache' (transformers.js; kohra's tokenizer too); 'gguf-v1', 'gguf-v1-headers' and
 //                   'bonsai-pipeline-v1' (LocalMind's engines; 'gguf-v1' holds the LFM2
-//                   engine): one entry per file URL (…/<repo>/resolve/<rev>/<file>). kohra's ONNX graph sits in the
-//                   browser's HTTP cache, which a page cannot list.
+//                   engine), 'kohra-models' (kohra v0.3.1+: its ONNX graph and data files): one entry per file URL
+//                   (…/<repo>/resolve/<rev>/<file>). Older kohra left its graph in the HTTP cache, which a page cannot list.
 //   IndexedDB       'gguf-cache-v1' (Bonsai 2) and 'safetensors-cache-v1' (Gemma 4 QAT-mobile): a store keyed by URL
 //                   with { size } and a chunk store keyed [url, start, end]; 'webgpu-prefix-snapshots' (Bonsai 2's
 //                   system-prompt snapshot).
@@ -18,7 +18,7 @@ import { DISKFORMER_MODELS } from './backends/diskformer.js';
 import { SPLIT_ROOT } from './gguf-split.js';
 import { readLlamaIndex, LLAMA_INDEX } from './backends/diskformer-llama.js';
 
-const CACHE_BACKEND = { 'transformers-cache': 'transformers', 'gguf-v1': 'localmind', 'gguf-v1-headers': 'localmind', 'bonsai-pipeline-v1': 'localmind' };
+const CACHE_BACKEND = { 'transformers-cache': 'transformers', 'gguf-v1': 'localmind', 'gguf-v1-headers': 'localmind', 'bonsai-pipeline-v1': 'localmind', 'kohra-models': 'kohra' };
 const IDB_STORES = ['gguf-cache-v1', 'safetensors-cache-v1'];
 const BONSAI2 = 'prism-ml/Ternary-Bonsai-2-27B-gguf';
 
