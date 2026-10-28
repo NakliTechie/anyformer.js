@@ -120,6 +120,7 @@ export const transformersBackend = {
     const gen = await lib.pipeline('text-generation', model.repo, {
       device: 'webgpu', dtype, revision: model.revision || 'main', progress_callback,
     });
+    feedLogitsToKeep(lib, gen.model);
     signal?.throwIfAborted();
     return {
       task: 'text-generation',
@@ -129,6 +130,20 @@ export const transformersBackend = {
     };
   },
 };
+
+// LiquidAI's LFM3 ONNX export names its last-position input logits_to_keep (shape [1]); transformers.js 4.3.2 feeds
+// only num_logits_to_keep and stops with "Missing the following inputs: logits_to_keep". Hide the input from
+// transformers.js's check and add it at the session's run, set to 1: generate() reads only the last position's logits.
+// LocalMind carries the same shim (index.html feedLogitsToKeep).
+function feedLogitsToKeep(lib, net) {
+  const sess = net?.sessions?.model;
+  if (!sess?.inputNames.includes('logits_to_keep')) return;
+  const names = sess.inputNames.filter((n) => n !== 'logits_to_keep');
+  const one = new lib.Tensor('int64', [1n], [1]).ort_tensor;
+  const run = sess.run.bind(sess);
+  Object.defineProperty(sess, 'inputNames', { value: names });
+  sess.run = (feeds, opts) => run({ ...feeds, logits_to_keep: one }, opts);
+}
 
 // A non-generation task: one pipeline, run(input, opts) calls it. ImageData (from a canvas) becomes a RawImage; URLs,
 // RawImage and, for speech, 16 kHz Float32Array samples pass through as transformers.js takes them.
