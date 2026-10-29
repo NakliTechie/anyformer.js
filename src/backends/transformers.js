@@ -124,8 +124,10 @@ export const transformersBackend = {
     signal?.throwIfAborted();
     return {
       task: 'text-generation',
-      generate: (messages, { maxNewTokens = 256, repetitionPenalty, signal } = {}) => stream(lib, gen.tokenizer, signal,
-        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), streamer, stopping_criteria })),
+      // thinking: false (the default, as on every back end here) renders the template with enable_thinking off, so a
+      // model that reasons by default (LFM3) answers directly; templates without the switch ignore it.
+      generate: (messages, { maxNewTokens = 256, repetitionPenalty, signal, thinking = false } = {}) => stream(lib, gen.tokenizer, signal,
+        (streamer, stopping_criteria) => gen(messages, { max_new_tokens: maxNewTokens, do_sample: false, ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), tokenizer_encode_kwargs: { enable_thinking: thinking === true }, streamer, stopping_criteria })),
       dispose: () => gen.dispose?.(),
     };
   },

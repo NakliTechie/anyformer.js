@@ -19,3 +19,12 @@ export const AutoTokenizer = {
 };
 export class TextStreamer { constructor(tokenizer, o) { this.callback_function = o.callback_function; } }
 export class InterruptableStoppingCriteria { interrupt() {} }
+// pipeline('text-generation'): records its options and each call's kwargs; the model's session asks for logits_to_keep
+// as LiquidAI's LFM3 export does, and records the feeds it runs with.
+export class Tensor { constructor(type, data, dims) { this.ort_tensor = { type, data, dims }; } }
+export async function pipeline(task, repo, opts) {
+  const session = { inputNames: ['input_ids', 'logits_to_keep'], async run(feeds) { calls.push({ type: 'run', feeds }); return {}; } };
+  calls.push({ type: 'pipeline', task, repo, opts, session });
+  const gen = async (messages, o) => { calls.push({ type: 'call', messages, o }); o.streamer?.callback_function?.('391'); };
+  return Object.assign(gen, { tokenizer: {}, model: { sessions: { model: session } }, dispose() {} });
+}
