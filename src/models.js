@@ -20,6 +20,7 @@ const MINICPM5_2B = M('openbmb/MiniCPM5-2B-GGUF', 'wllama', 'text-generation', '
 const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9, diffusion: true });
 const NEMOTRON_DIFFUSION_3B = M('naklitechie/Nemotron-Labs-Diffusion-3B-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 2.77e9, diffusion: true, experimental: true });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
+const LFM3_1_7B = M('LiquidAI/LFM3-1.7B-ONNX', 'transformers', 'text-generation', 'chat', { downloadBytes: 1.63e9 });
 const NEMOTRON_3_5_BOLT_E4B = M('danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU', 'transformers', 'text-generation', 'transformers', { budget: 5e9, downloadBytes: 4.94e9 });
 // A tech demo, not a gated model: 231 GB on disk (4 IQ1_M parts plus the 110.6 GB Engram side file), about 0.4 tok/s.
 // diskformer checked one hand-written prompt through complete(); generate() renders the GGUF's chat template, which no
@@ -54,6 +55,8 @@ export const MODELS = {
     GEMMA4_26B_A4B,
     /** NVIDIA's Nemotron 3.5 Bolt E4B (dense, text only), a community q4f16 ONNX export in Gemma 4 E4B's graph. */
     NEMOTRON_3_5_BOLT_E4B,
+    /** LiquidAI's LFM3 1.7B (dense), LiquidAI's own ONNX export; thinking off unless a request asks for it. */
+    LFM3_1_7B,
     /** DeepSeek V4.1 Flash (763B MoE), a tech demo on diskformer's llama.cpp path: 231 GB on disk, very slow. */
     DEEPSEEK_V4_1_FLASH,
   },

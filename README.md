@@ -54,7 +54,7 @@ back end's answer: yes with an estimate (GPU bytes, disk bytes, tok/s when measu
 
 | Back end | Runs | Models |
 |---|---|---|
-| `transformers` | transformers.js 4.3.1: text generation (Nemotron 3.5 Bolt E4B among them), image and audio chat (Gemma 4, Qwen3.5), embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
+| `transformers` | transformers.js 4.3.2: text generation (Nemotron 3.5 Bolt E4B and LFM3 1.7B among them), image and audio chat (Gemma 4, Qwen3.5), embeddings, speech to text, detection, classification, depth, segmentation | ONNX repos in the onnx-community / Xenova layout |
 | `kohra` | kohra, text-diffusion over onnxruntime-web | MDLM and BD3LM repos tagged `text-diffusion`; Nemotron-Labs-Diffusion-3B |
 | `localmind` | LocalMind's hand-written WebGPU kernels (shipped in diskformer), the whole model on the GPU | any LFM2 / LFM2.5 GGUF; Gemma 4 E2B / E4B QAT-mobile; Ternary Bonsai 2 |
 | `wllama` | llama.cpp in WebAssembly: WebGPU when the budget holds the model, the CPU otherwise (no WebGPU needed) | any GGUF up to about 3.6 GB that no engine above covers; files over 2 GB are split into OPFS shards once |

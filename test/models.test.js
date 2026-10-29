@@ -33,6 +33,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU': 'danyalmalik_NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU',
     'naklitechie/Nemotron-Labs-Diffusion-3B-ONNX': 'naklitechie_Nemotron-Labs-Diffusion-3B-ONNX',
     'ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF': 'ISTA-DASLab_DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF',
+    'LiquidAI/LFM3-1.7B-ONNX': 'LiquidAI_LFM3-1.7B-ONNX',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
     'Xenova/detr-resnet-50': 'Xenova_detr-resnet-50',
   };

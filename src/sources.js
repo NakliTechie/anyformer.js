@@ -4,7 +4,7 @@
 // transformers.js and wllama move only by hand, in step with LocalMind's pins (plan/history.md, 2026-10-08).
 
 export const PINS = {
-  transformers: '4.3.1',
+  transformers: '4.3.2', // 4.3.2 adds model_type lfm3 (LFM3 1.7B)
   wllama: '3.4.1',      // LocalMind's pin; its stream-drain workaround (src/backends/wllama.js) is for this version
   // v0.3.1: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data; download progress
   // (progress_callback) and the graph files cached in Cache Storage 'kohra-models'.

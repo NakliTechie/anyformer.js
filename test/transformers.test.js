@@ -29,3 +29,29 @@ test('transformers: a text-only Gemma 4 export loads through Gemma4ForCausalLM w
     transformersBackend.source = was;
   }
 });
+
+test('transformers: the pipeline path turns thinking off by default and feeds LFM3 its logits_to_keep input', async () => {
+  const lfm3 = fixture('LiquidAI_LFM3-1.7B-ONNX');
+  const p = await plan(lfm3.repo, { model: lfm3, caps });
+  assert.equal(p.chosen, 'transformers');
+  const fake = await import('./fixtures/fake-engines/transformers.js');
+  fake.calls.length = 0;
+  const was = transformersBackend.source;
+  transformersBackend.source = new URL('./fixtures/fake-engines/transformers.js', import.meta.url).href;
+  try {
+    const s = await transformersBackend.load(lfm3, { caps });
+    const pipe = fake.calls.find((c) => c.type === 'pipeline');
+    assert.equal(pipe.opts.dtype, 'q4');
+    assert.deepEqual(pipe.session.inputNames, ['input_ids']);
+    await pipe.session.run({ input_ids: 'ids' });
+    const feeds = fake.calls.find((c) => c.type === 'run').feeds;
+    assert.equal(feeds.input_ids, 'ids');
+    assert.deepEqual(feeds.logits_to_keep, { type: 'int64', data: [1n], dims: [1] });
+    const messages = [{ role: 'user', content: '17 x 23?' }];
+    for await (const _ of s.generate(messages));
+    for await (const _ of s.generate(messages, { thinking: true }));
+    assert.deepEqual(fake.calls.filter((c) => c.type === 'call').map((c) => c.o.tokenizer_encode_kwargs), [{ enable_thinking: false }, { enable_thinking: true }]);
+  } finally {
+    transformersBackend.source = was;
+  }
+});
