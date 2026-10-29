@@ -7,8 +7,16 @@
 - transformers back end: a graph whose last-position input is named `logits_to_keep` (LiquidAI's LFM3 ONNX export)
   gets it fed at the session's run; transformers.js 4.3.2 feeds only `num_logits_to_keep` and stopped with "Missing
   the following inputs". `LiquidAI/LFM3-1.7B-ONNX` now loads and generates through `chat.html` (64 tokens at
-  67 tok/s, Chrome, this Mac, 2026-10-28). No catalog entry yet: the pipeline path leaves LFM3's thinking on, so the
-  reply is all reasoning and the chat check's on-topic test fails.
+  67 tok/s, Chrome, this Mac, 2026-10-28).
+- transformers back end, text pipeline path: `thinking: false` by default, as on every other back end. The template
+  renders with `enable_thinking` off (through `tokenizer_encode_kwargs`), so LFM3 answers directly; `thinking: true`
+  per request turns it on. Templates without the switch ignore it.
+- `test/browser/chat.html` takes `?dtype=` and fails a reply that contains `<think>` text.
+
+### Added
+- `MODELS.chat.LFM3_1_7B`: `LiquidAI/LFM3-1.7B-ONNX` on `transformers` (asked for by LocalMind for Chirag). Browser
+  chat check on 2026-10-29, Chrome, this Mac: on topic, no `<think>` text, on q4 (anyformer's pick, 1.63 GB; 82.4
+  tok/s) and on q4f16 (`dtype: 'q4f16'`, LocalMind's precision, 1.38 GB; 76.6 tok/s), the same 61-token reply.
 
 ## 0.4.11 — 2026-10-24
 
