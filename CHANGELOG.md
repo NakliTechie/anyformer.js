@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.12 — 2026-10-29
 
 ### Changed
 - transformers.js pin 4.3.1 → 4.3.2 (in step with LocalMind), which adds `model_type` `lfm3` and `lfm3_vl`.
