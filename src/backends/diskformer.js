@@ -30,8 +30,9 @@ export const DISKFORMER_MODELS = [
   // Clover-35B-A3B-Preview (Diffuspace, Apache-2.0): block diffusion on Qwen3.6-35B-A3B, text only. The engine
   // (engines/clover_moe_ssd.js CLOVER_35B_A3B, rev 32e22a0) fills a 32-token block over several denoising passes
   // (kohra's denoise module), so generate() yields once per committed block. Gated by diskformer (v0.6.15: oracle
-  // and browser chat) at a 1 GB expert pool and maxCtx 1024; speed unmeasured. The floor is Qwen3.6's, the same
-  // backbone.
+  // and browser chat) at a 1 GB expert pool and maxCtx 1024; speed unmeasured. At maxCtx 1024 the engine fixes about
+  // 2.0 GB (dense 1.46, KV and DeltaNet state 0.09, working buffers) and refuses under about 2.05 GB (diskformer's
+  // reading of its budget formula); 4 GB, Qwen3.6's floor, leaves about 1.9 GB of experts.
   {
     repo: 'Diffuspace/Clover-35B-A3B-Preview-GGUF', file: 'Clover-35B-A3B-Preview-Q4_0.gguf', size: 19586909600,
     engine: 'clover_moe_ssd.js', Engine: 'CloverMoeSsd', minBudget: 4e9,
