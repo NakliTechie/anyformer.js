@@ -1,0 +1,56 @@
+<!doctype html><meta charset="utf-8"><title>omni-speech</title>
+<!-- LFM3-Omni-2B speech out through anyformer (diskformer-onnx), loaded with { speech: true }: the fixture's speech
+     clip in (test/refs/lfm3-omni at the pinned diskformer commit), generate({ speech: true }) sampled as the product
+     does. Passes when the reply's text answers the clip (it names Everest), speech arrives in more than one chunk at
+     24 kHz, lasts at least 1 s, and has a speech-like level (RMS 0.01 to 0.3, the reference's is 0.048); when an abort
+     from the first speech chunk ends the reply early; and when a text-only reply after it still equals the text
+     reference. The word-level and code-level match is diskformer's gate (test/browser/lfm3-omni-speech.html).
+     ?local=1 reads the repo layout from /models/ (run.mjs --models <folder>) instead of Hugging Face. -->
+<script type="module">
+import * as af from '../../index.js';
+import { run, log } from './harness.js';
+const q = new URLSearchParams(location.search);
+if (q.get('local')) af.diskformerOnnxBackend.url = () => `${location.origin}/models/`;
+const refs = `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer') || af.PINS.diskformer}/test/refs/lfm3-omni/`;
+const get = async (f) => (await fetch(refs + f)).arrayBuffer();
+const level = (pcm) => { let s = 0, peak = 0; for (const x of pcm) { s += x * x; peak = Math.max(peak, Math.abs(x)); } return { rms: +Math.sqrt(s / (pcm.length || 1)).toFixed(4), peak: +peak.toFixed(4) }; };
+run('omni-speech', async () => {
+  const fx = await (await fetch(refs + 'fixture.json')).json();
+  const wave = Float32Array.from(new Int16Array(await get(fx.speech.file)), (x) => x / 32768);
+  const t0 = performance.now();
+  let last = '';
+  const s = await af.load(af.MODELS.chat.LFM3_OMNI_2B, { speech: true,
+    onProgress: (p) => { const t = `${p.backend} ${p.status || ''} ${p.file || ''} ${p.loaded ?? ''}/${p.total ?? ''}`; if (t !== last && Date.now() % 5 === 0) log(last = t); } });
+  const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
+  log(`loaded by ${s.backend} with speech in ${loadSeconds} s`);
+  const ask = [{ role: 'user', content: [{ type: 'audio', audio: wave }] }];
+  // A spoken reply: text, PCM chunks joined, the sample rate.
+  async function speak(opts) {
+    const parts = [];
+    let text = '', chunks = 0, rate = 0, firstAudio = 0;
+    const t1 = performance.now();
+    for await (const c of s.generate(ask, { speech: true, maxNewTokens: 240, ...opts })) {
+      text = c.text;
+      if (c.audio) { parts.push(c.audio); chunks++; rate = c.sampleRate; firstAudio ||= performance.now() - t1; opts?.onChunk?.(); }
+    }
+    const pcm = new Float32Array(parts.reduce((a, p) => a + p.length, 0));
+    let o = 0; for (const p of parts) { pcm.set(p, o); o += p.length; }
+    return { text, chunks, sampleRate: rate, samples: pcm.length, seconds: +(pcm.length / (rate || 24000)).toFixed(2),
+      firstAudioMs: Math.round(firstAudio), wallSeconds: +((performance.now() - t1) / 1e3).toFixed(1), ...level(pcm) };
+  }
+  const reply = await speak({ seed: 1 });
+  log(JSON.stringify({ reply }));
+  const ac = new AbortController();
+  const aborted = await speak({ seed: 1, signal: ac.signal, onChunk: () => ac.abort() });
+  log(JSON.stringify({ aborted }));
+  const c = fx.cases[0];
+  let text = '';
+  for await (const k of s.generate(c.messages, { maxNewTokens: c.gen.length })) text = k.text;
+  const textMatch = text === c.text.replace(/<\|im_end\|>$/, '');
+  await s.engine.constructor.deleteCache({ baseUrl: s.baseUrl });
+  await s.dispose();
+  const ok = /everest/i.test(reply.text) && reply.chunks > 1 && reply.sampleRate === 24000 && reply.seconds >= 1 &&
+    reply.rms >= 0.01 && reply.rms <= 0.3 && aborted.chunks <= 2 && aborted.samples < reply.samples && textMatch;
+  return { ok, backend: s.backend, loadSeconds, reply, aborted, textAfterSpeech: { match: textMatch, text } };
+});
+</script>
