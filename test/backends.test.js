@@ -185,6 +185,18 @@ test('load(): the session exposes the back end\'s engine read-only', async () =>
   } finally { diskformerBackend.source = saved; }
 });
 
+test('diskformer: Clover-35B-A3B goes to its hand engine at a 4 GB budget, untimed; the llama.cpp path refuses clover_moe', async () => {
+  const caps = { ...full, memory64: true, jspi: true };
+  const clover = fromHubInfo({ id: 'Diffuspace/Clover-35B-A3B-Preview-GGUF', gguf: { architecture: 'clover_moe' }, siblings: [{ rfilename: 'Clover-35B-A3B-Preview-Q4_0.gguf', size: 19586909600 }] });
+  const p = await plan(clover.repo, { model: clover, caps, budget: 4e9 });
+  assert.equal(p.chosen, 'diskformer');
+  const c = p.candidates.find((x) => x.backend === 'diskformer');
+  assert.equal(c.estimate.tokPerSec, null);
+  assert.equal(c.estimate.diskBytes, 19586909600);
+  assert.equal(diskformerBackend.canRun(clover, caps, { budget: 3e9 }).need, 4e9);
+  assert.equal(p.candidates.find((x) => x.backend === 'diskformer-llama')?.ok ?? false, false);
+});
+
 test('diskformer: Flint 40B and LFM2.5 24B go to their hand engines, not the llama.cpp path that also checked their files', async () => {
   const caps = { ...full, memory64: true, jspi: true };
   const flint = fromHubInfo({ id: 'RecursiveSI/flint-int4-gguf', gguf: { architecture: 'flint' }, siblings: [{ rfilename: 'flint-int4-q4_1.gguf', size: 25992966976 }] });

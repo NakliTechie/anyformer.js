@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.17 — 2026-10-30
+
+### Added
+- `MODELS.chat.CLOVER_35B_A3B`: Diffuspace's Clover-35B-A3B-Preview (Apache-2.0), block diffusion on Qwen3.6-35B-A3B,
+  text only, on diskformer's `clover_moe_ssd.js` (Q4_0 GGUF, 19.6 GB, from OPFS; 4 GB budget). `diffusion` and
+  `experimental`; speed unmeasured. generate() yields once per committed 32-token block. Hub fixture at revision
+  32e22a0. Browser test `chat` passed (Chrome, this Mac, 23:17 IST, GGUF from Models2, 4 GB budget): load 55.6 s
+  including the copy into OPFS, an on-topic 25-token reply in 25.4 s.
+- Browser test `chat` takes `?local=1` for a diskformer GGUF served from `--models`.
+
+### Changed
+- diskformer pin 93193d0 → f17009c (v0.6.15: the Clover engine; `qwen35_moe_ssd.js` and `qwen3_moe_ssd.js` only learn
+  to accept the `clover_moe` architecture).
+
 ## 0.4.16 — 2026-10-30
 
 ### Changed

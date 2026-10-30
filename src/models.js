@@ -1,7 +1,7 @@
 // Models that pass a browser test through anyformer, grouped by what they do. Pass an entry to load() in place of a
 // repo id; it carries the task and, where the back end needs one, the budget. DEFAULT is the smallest download that
 // passed. `test` names the page under test/browser/ that proves the entry; test/models.test.js checks it exists.
-// `diffusion: true` marks a text-diffusion model (the reply denoises in blocks); `experimental: true` marks an entry its
+// `diffusion: true` marks a text-diffusion model (the reply denoises in blocks, so generate() chunks arrive a block at a time); `experimental: true` marks an entry its
 // app shows as opt-in until that app's own checks pass; `audioOut: true` marks a model that can also answer in speech
 // (generate({ speech: true })).
 
@@ -21,6 +21,8 @@ const MINICPM5_2B = M('openbmb/MiniCPM5-2B-GGUF', 'wllama', 'text-generation', '
 const QWEN3_0_6B_MDLM = M('naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 1.54e9, diffusion: true });
 const NEMOTRON_DIFFUSION_3B = M('naklitechie/Nemotron-Labs-Diffusion-3B-ONNX', 'kohra', 'text-generation', 'kohra', { downloadBytes: 2.77e9, diffusion: true, experimental: true });
 const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer', 'text-generation', 'diskformer-chat', { budget: 2.5e9, downloadBytes: 14.44e9 });
+// Block diffusion on Qwen3.6-35B-A3B: replies arrive one 32-token block at a time. Speed unmeasured.
+const CLOVER_35B_A3B = M('Diffuspace/Clover-35B-A3B-Preview-GGUF', 'diskformer', 'text-generation', 'chat', { budget: 4e9, downloadBytes: 19.59e9, diffusion: true, experimental: true });
 const LFM3_1_7B = M('LiquidAI/LFM3-1.7B-ONNX', 'transformers', 'text-generation', 'chat', { downloadBytes: 1.63e9 });
 // transformers.js 4.3.2 has no lfm3_omni class, so diskformer's hand engine runs it; swap the entry to transformers.js
 // when it adds the model.
@@ -57,6 +59,8 @@ export const MODELS = {
     NEMOTRON_DIFFUSION_3B,
     /** 26B parameters in 2.5 GB of GPU memory; 14.4 GB on disk (diskformer). */
     GEMMA4_26B_A4B,
+    /** Diffuspace's Clover-35B-A3B-Preview: block diffusion on Qwen3.6-35B-A3B, 19.6 GB on disk; replies arrive in 32-token blocks (diskformer). */
+    CLOVER_35B_A3B,
     /** NVIDIA's Nemotron 3.5 Bolt E4B (dense, text only), a community q4f16 ONNX export in Gemma 4 E4B's graph. */
     NEMOTRON_3_5_BOLT_E4B,
     /** LiquidAI's LFM3 1.7B (dense), LiquidAI's own ONNX export; thinking off unless a request asks for it. */

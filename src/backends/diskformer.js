@@ -27,6 +27,17 @@ export const DISKFORMER_MODELS = [
     engine: 'qwen35_moe_ssd.js', Engine: 'MiniCpmV47Ssd', minBudget: 4e9,
     speeds: [[6.1e9, 14.1]],
   },
+  // Clover-35B-A3B-Preview (Diffuspace, Apache-2.0): block diffusion on Qwen3.6-35B-A3B, text only. The engine
+  // (engines/clover_moe_ssd.js CLOVER_35B_A3B, rev 32e22a0) fills a 32-token block over several denoising passes
+  // (kohra's denoise module), so generate() yields once per committed block. Gated by diskformer (v0.6.15: oracle
+  // and browser chat) at a 1 GB expert pool and maxCtx 1024; speed unmeasured. At maxCtx 1024 the engine fixes about
+  // 2.0 GB (dense 1.46, KV and DeltaNet state 0.09, working buffers) and refuses under about 2.05 GB (diskformer's
+  // reading of its budget formula); 4 GB, Qwen3.6's floor, leaves about 1.9 GB of experts.
+  {
+    repo: 'Diffuspace/Clover-35B-A3B-Preview-GGUF', file: 'Clover-35B-A3B-Preview-Q4_0.gguf', size: 19586909600,
+    engine: 'clover_moe_ssd.js', Engine: 'CloverMoeSsd', minBudget: 4e9,
+    speeds: [],
+  },
   // From LocalMind's gates (M4 Pro, 4 GiB pool; plan/2026-10-22-flint-harness): Flint ~7.3 GB on the GPU at maxCtx
   // 8192 (dense 2.33, pool 4.29, KV 0.41, batch 0.20), 8.66 tok/s at lookahead 1. LFM2.5 24B ~16 tok/s at a 4 GiB
   // pool; its total GPU use was not recorded, so it carries no speed estimate. The smallest working budget of either
