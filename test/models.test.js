@@ -30,6 +30,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'openbmb/MiniCPM5-2B-GGUF': 'openbmb_MiniCPM5-2B-GGUF',
     'naklitechie/Qwen3-0.6B-diffusion-mdlm-ONNX': 'naklitechie_Qwen3-0.6B-diffusion-mdlm-ONNX',
     'google/gemma-4-26B-A4B-it-qat-q4_0-gguf': 'google_gemma-4-26B-A4B-it-qat-q4_0-gguf',
+    'Diffuspace/Clover-35B-A3B-Preview-GGUF': 'Diffuspace_Clover-35B-A3B-Preview-GGUF',
     'danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU': 'danyalmalik_NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU',
     'naklitechie/Nemotron-Labs-Diffusion-3B-ONNX': 'naklitechie_Nemotron-Labs-Diffusion-3B-ONNX',
     'ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF': 'ISTA-DASLab_DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF',
@@ -47,11 +48,11 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
   }
 });
 
-test('diffusion entries run on kohra; Nemotron-Labs-Diffusion-3B and DeepSeek V4.1 Flash are experimental', () => {
-  for (const m of entries) assert.equal(!!m.diffusion, m.backend === 'kohra', m.repo);
-  assert.equal(MODELS.chat.NEMOTRON_DIFFUSION_3B.experimental, true);
-  assert.equal(MODELS.chat.DEEPSEEK_V4_1_FLASH.experimental, true);
-  assert.equal(entries.filter((m) => m.experimental).length, 2);
+test('diffusion entries run on kohra, or on diskformer for Clover; three entries are experimental', () => {
+  for (const m of entries) assert.equal(!!m.diffusion, m.backend === 'kohra' || m === MODELS.chat.CLOVER_35B_A3B, m.repo);
+  assert.equal(MODELS.chat.CLOVER_35B_A3B.backend, 'diskformer');
+  for (const k of ['NEMOTRON_DIFFUSION_3B', 'DEEPSEEK_V4_1_FLASH', 'CLOVER_35B_A3B']) assert.equal(MODELS.chat[k].experimental, true, k);
+  assert.equal(entries.filter((m) => m.experimental).length, 3);
 });
 
 test('options passed with an entry win over the entry', async () => {

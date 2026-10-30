@@ -1,11 +1,12 @@
 <!doctype html><meta charset="utf-8"><title>chat</title>
 <!-- One chat reply through anyformer, checked on topic: ?repo=<Hub id> (default LFM2.5 230M GGUF), ?budget=<GB>,
      ?backend=<id> to use one back end, registered or not (default: the resolver's choice among BACKENDS),
-     ?dtype=<precision> to override the back end's pick. A reply with <think> text fails: thinking is off by default. -->
+     ?dtype=<precision> to override the back end's pick, ?local=1 to read a diskformer GGUF from run.mjs's --models folder. A reply with <think> text fails: thinking is off by default. -->
 <script type="module">
 import * as af from '../../index.js';
 import { run, log, reply, onTopic } from './harness.js';
 const q = new URLSearchParams(location.search);
+if (q.get('local')) af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
 const only = q.get('backend') && Object.values(af).find((b) => b?.id === q.get('backend') && b.canRun);
 run('chat', async () => {
   const t0 = performance.now();
