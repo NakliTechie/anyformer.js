@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.16 — 2026-10-30
+
+### Changed
+- diskformer pin 7ffbea5 → 93193d0 (v0.6.14: LFM3-Omni speech out runs at 1.5–1.8x real time, up from 0.54x, on an
+  M4 Pro; the inverse STFT uses an FFT with the same output; changes only `engines/lfm3_omni.js`).
+- Browser test `omni-speech` on the new pin (Chrome, this Mac, local files, about 22:50 IST): 13.52 s of speech in
+  7.1 s (1.9x real time), first sound after 0.98 s; abort at the first speech chunk; text reply after it equal.
+
 ## 0.4.15 — 2026-10-30
 
 ### Fixed

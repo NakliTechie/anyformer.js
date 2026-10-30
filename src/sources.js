@@ -9,6 +9,8 @@ export const PINS = {
   // v0.3.1: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data; download progress
   // (progress_callback) and the graph files cached in Cache Storage 'kohra-models'.
   kohra: 'bf95d44c3e3cfc001201baa03fa121c2bf9c7d73',
+  // v0.6.14 (93193d0): LFM3-Omni speech out's inverse STFT uses an FFT (same samples), 0.54x → 1.5–1.8x real time on
+  // an M4 Pro. Changes only engines/lfm3_omni.js.
   // v0.6.13 (7ffbea5): LFM3-Omni serves one reply at a time; overlapping runs broke onnxruntime-web WebGPU.
   // v0.6.12 (1fe19f8): LFM3-Omni speech out (interleaved text and 24 kHz speech; depth and codec decoders). Changes
   // only engines/lfm3_omni.js; its text, image and speech-in gate (3/3) is unchanged.
@@ -19,7 +21,7 @@ export const PINS = {
   // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/, which loads split GGUFs
   // and drafters, and reads past 2 GiB (Nemotron 3.5 Bolt E4B needs v0.6.8 or later). The hand engines' ingest
   // streams the GGUF header with progress and resumes a dropped range.
-  diskformer: '7ffbea54a5f09494e1f6c970cce7c4c7b1b8460d',
+  diskformer: '93193d0913f5e76059fa45db509dc670e7527430',
 };
 
 const gh = (repo, sha, path) => `https://cdn.jsdelivr.net/gh/NakliTechie/${repo}@${sha}/${path}`;
