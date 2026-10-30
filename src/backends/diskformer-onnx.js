@@ -11,7 +11,9 @@ import { SOURCES } from '../sources.js';
 
 // Keyed by config.model_type. graphs: the ONNX files the engine reads (each with its _data file); json: the small files.
 export const ONNX_ENGINES = {
-  // LiquidAI LFM3-Omni-2B: text, image and speech in (16 kHz Float32Array, at most 30 s a clip), text out. transformers.js
+  // LiquidAI LFM3-Omni-2B: text, image and speech in (16 kHz Float32Array, at most 30 s a clip); text out, or text and
+  // speech interleaved (24 kHz, from the depth and codec decoders, 515 MB more, fetched on the first spoken reply or by
+  // load({ speech: true })). transformers.js
   // 4.3.2 has no lfm3_omni class; swap to transformers.js when it adds the model. diskformer's gate
   // (test/browser/lfm3-omni.html, onnxruntime-web 1.30.0): prompt ids and 32 greedy tokens equal Liquid's runner on
   // onnxruntime's CPU EP for text, image and speech, 3/3.
@@ -57,11 +59,12 @@ export const diskformerOnnxBackend = {
     return { ok: true, estimate: { gpuBytes: bytes, diskBytes: bytes, tokPerSec: null } };
   },
 
-  async load(model, { onProgress, signal }) {
+  // speech: true also fetches the speech-out graphs now, so the first spoken reply does not wait for them.
+  async load(model, { speech = false, onProgress, signal }) {
     const e = ONNX_ENGINES[model.architecture];
     const mod = await import(`${diskformerOnnxBackend.source}/${e.engine}`);
     const baseUrl = diskformerOnnxBackend.url ? diskformerOnnxBackend.url(model) : `https://huggingface.co/${model.repo}/resolve/${model.revision || 'main'}/`;
-    const engine = await mod[e.Engine].load({ baseUrl, onProgress: onProgress && ((p) => onProgress({ backend: 'diskformer-onnx', ...p })) });
+    const engine = await mod[e.Engine].load({ baseUrl, ...(speech && { speech: true }), onProgress: onProgress && ((p) => onProgress({ backend: 'diskformer-onnx', ...p })) });
     if (signal?.aborted) { await engine.dispose(); signal.throwIfAborted(); }
     return {
       task: 'text-generation',
@@ -73,13 +76,27 @@ export const diskformerOnnxBackend = {
       // or { data, width, height }) and { type: 'audio', audio } (16 kHz mono Float32Array). thinking: false (the
       // default, as on every back end here) answers directly. tools: the chat template's tool list; tool calls stay
       // raw text in the reply (LFM3 writes Qwen3-Coder XML), for the caller to parse. An abort ends the reply quietly.
-      async *generate(messages, { maxNewTokens = 512, signal, thinking = false, tools, repetitionPenalty } = {}) {
+      // speech: true answers in interleaved text and speech (the engine adds its speech system turn when the messages
+      // have none, and thinks never): a chunk that carries new speech has `audio`, the 24 kHz Float32 PCM since the last
+      // chunk, and `sampleRate`; maxNewTokens then counts text tokens and speech frames (80 ms each) together. Speech is
+      // sampled (generation_config.json: temperature 0.4, repetition penalty 1.2 over 64 frames); audioTemperature,
+      // audioRepetitionPenalty, audioRepetitionWindow and seed override it.
+      async *generate(messages, { maxNewTokens = 512, signal, thinking = false, tools, repetitionPenalty, speech = false, seed,
+        audioTemperature, audioRepetitionPenalty, audioRepetitionWindow } = {}) {
         const queue = [];
         let wake = () => {}, done = false, failed = null, text = '', tokens = 0;
         const msgs = await media(messages);
+        const sampleRate = engine.speech?.sampling_rate ?? 24000;
         engine.generate(msgs, {
           max_new_tokens: maxNewTokens, do_sample: false, enable_thinking: thinking === true, signal,
-          ...(tools && { tools }), ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }),
+          ...(tools && { tools }), ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), ...(seed !== undefined && { seed }),
+          ...(speech && {
+            output_modalities: ['text', 'audio'],
+            onAudio: (pcm) => { queue.push({ text, tokens, audio: pcm, sampleRate }); wake(); },
+            ...(audioTemperature !== undefined && { audio_temperature: audioTemperature }),
+            ...(audioRepetitionPenalty !== undefined && { audio_repetition_penalty: audioRepetitionPenalty }),
+            ...(audioRepetitionWindow !== undefined && { audio_repetition_window: audioRepetitionWindow }),
+          }),
           onToken: () => { tokens++; },
           onText: (delta) => { text += delta; queue.push({ text, tokens }); wake(); },
         }).catch((err) => { failed = err; }).finally(() => { done = true; wake(); });

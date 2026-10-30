@@ -41,8 +41,18 @@ test('diskformer-onnx: generate streams the engine text cumulatively, thinking o
     assert.equal(g2.opts.signal, ac.signal);
     assert.equal(g2.opts.max_new_tokens, 8);
     assert.equal(g2.messages[0].content[0].audio, wave);
+    const spoken = [];
+    for await (const c of s.generate([{ role: 'user', content: 'Capital of France?' }], { speech: true, seed: 7, audioTemperature: 0 })) spoken.push(c);
+    const g3 = fake.calls.filter((c) => c.type === 'generate')[2];
+    assert.deepEqual(g3.opts.output_modalities, ['text', 'audio']);
+    assert.equal(g3.opts.seed, 7);
+    assert.equal(g3.opts.audio_temperature, 0);
+    assert.deepEqual(spoken.filter((c) => c.audio).map((c) => [c.text, c.audio.length, c.sampleRate]), [['The capital', 4, 24000], ['The capital is Paris.', 4, 24000]]);
+    assert.equal(g1.opts.output_modalities, undefined);
     await s.dispose();
     assert.ok(fake.calls.some((c) => c.type === 'dispose'));
+    await diskformerOnnxBackend.load(omni, { caps, speech: true });
+    assert.equal(fake.calls.filter((c) => c.type === 'load').at(-1).opts.speech, true);
   } finally {
     diskformerOnnxBackend.source = was;
   }

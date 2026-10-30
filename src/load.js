@@ -43,14 +43,14 @@ export async function plan(repoOrEntry, opts = {}) {
 
 export async function load(repoOrEntry, options = {}) {
   const [repo, opts] = entry(repoOrEntry, options);
-  const { backends = BACKENDS, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, onProgress, signal } = opts;
+  const { backends = BACKENDS, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, speech, onProgress, signal } = opts;
   let p;
   try { p = await plan(repo, opts); } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${repo}: `); }
   if (!p.chosen) throw noBackend(p);
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, speech, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   // Added onto serialize()'s object, not spread: a spread would read its getters once and freeze them.
   return Object.assign(serialize(session), { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p });

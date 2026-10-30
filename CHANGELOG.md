@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `diskformer-onnx`: LFM3-Omni speech out. `load(MODELS.chat.LFM3_OMNI_2B, { speech: true })` also fetches the depth
+  and codec decoders (515 MB, Cache Storage 'diskformer-models'); `generate(messages, { speech: true })` answers in
+  interleaved text and speech, and a chunk with new speech carries `audio` (24 kHz Float32 PCM since the last chunk)
+  and `sampleRate`. `seed`, `audioTemperature`, `audioRepetitionPenalty` and `audioRepetitionWindow` pass through.
+  Catalog flag `audioOut: true` on `MODELS.chat.LFM3_OMNI_2B`.
+- Browser test `omni-speech` (Chrome, this Mac, 2026-10-30, local files): the reference speech clip in, a spoken reply
+  that names Mount Everest, 13.5 s of 24 kHz speech in 15 chunks over 9.3 s (first sound after 1.1 s), RMS 0.037
+  (the reference's 0.048); an abort from the first speech chunk ended the reply after 0.9 s of speech; a text reply
+  after it still equals the text reference. Code-level exactness is diskformer's own gate.
+
+### Changed
+- diskformer pin 48f2c2a → 1fe19f8 (v0.6.12, LFM3-Omni speech out; changes only `engines/lfm3_omni.js`). The `omni`
+  test passes again on it (3/3 equal to the reference, streaming, abort, tool call).
+
 ## 0.4.13 — 2026-10-30
 
 ### Added

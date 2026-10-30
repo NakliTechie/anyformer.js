@@ -2,7 +2,8 @@
 // repo id; it carries the task and, where the back end needs one, the budget. DEFAULT is the smallest download that
 // passed. `test` names the page under test/browser/ that proves the entry; test/models.test.js checks it exists.
 // `diffusion: true` marks a text-diffusion model (the reply denoises in blocks); `experimental: true` marks an entry its
-// app shows as opt-in until that app's own checks pass.
+// app shows as opt-in until that app's own checks pass; `audioOut: true` marks a model that can also answer in speech
+// (generate({ speech: true })).
 
 const M = (repo, backend, task, test, extra = {}) => ({ repo, backend, task, test, ...extra });
 
@@ -23,7 +24,7 @@ const GEMMA4_26B_A4B = M('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', 'diskformer'
 const LFM3_1_7B = M('LiquidAI/LFM3-1.7B-ONNX', 'transformers', 'text-generation', 'chat', { downloadBytes: 1.63e9 });
 // transformers.js 4.3.2 has no lfm3_omni class, so diskformer's hand engine runs it; swap the entry to transformers.js
 // when it adds the model.
-const LFM3_OMNI_2B = M('LiquidAI/LFM3-Omni-2B-ONNX', 'diskformer-onnx', 'any-to-any', 'omni', { downloadBytes: 2.14e9 });
+const LFM3_OMNI_2B = M('LiquidAI/LFM3-Omni-2B-ONNX', 'diskformer-onnx', 'any-to-any', 'omni', { downloadBytes: 2.14e9, audioOut: true });
 const NEMOTRON_3_5_BOLT_E4B = M('danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-WebGPU', 'transformers', 'text-generation', 'transformers', { budget: 5e9, downloadBytes: 4.94e9 });
 // A tech demo, not a gated model: 231 GB on disk (4 IQ1_M parts plus the 110.6 GB Engram side file), about 0.4 tok/s.
 // diskformer checked one hand-written prompt through complete(); generate() renders the GGUF's chat template, which no
@@ -60,7 +61,7 @@ export const MODELS = {
     NEMOTRON_3_5_BOLT_E4B,
     /** LiquidAI's LFM3 1.7B (dense), LiquidAI's own ONNX export; thinking off unless a request asks for it. */
     LFM3_1_7B,
-    /** LiquidAI's LFM3-Omni-2B: text, image and speech in (16 kHz, at most 30 s a clip), text out (diskformer's engine). */
+    /** LiquidAI's LFM3-Omni-2B: text, image and speech in (16 kHz, at most 30 s a clip); text or text and speech out (diskformer's engine). */
     LFM3_OMNI_2B,
     /** DeepSeek V4.1 Flash (763B MoE), a tech demo on diskformer's llama.cpp path: 231 GB on disk, very slow. */
     DEEPSEEK_V4_1_FLASH,

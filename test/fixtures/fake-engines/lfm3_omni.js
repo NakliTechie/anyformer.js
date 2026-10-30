@@ -8,8 +8,12 @@ export class Lfm3Omni {
   }
   async generate(messages, opts) {
     calls.push({ type: 'generate', messages, opts });
-    for (const piece of ['The capital', ' is Paris.']) { opts.onToken?.(1); opts.onText?.(piece); }
+    for (const piece of ['The capital', ' is Paris.']) {
+      opts.onToken?.(1); opts.onText?.(piece);
+      if (opts.output_modalities?.includes('audio')) opts.onAudio?.(new Float32Array(4));
+    }
     return { text: 'The capital is Paris.', stopReason: 'eos' };
   }
+  speech = { sampling_rate: 24000 };
   async dispose() { calls.push({ type: 'dispose' }); }
 }
