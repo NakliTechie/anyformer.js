@@ -8,6 +8,13 @@ export class Lfm3Omni {
   }
   async generate(messages, opts) {
     calls.push({ type: 'generate', messages, opts });
+    // long: a reply that runs until its signal aborts, one piece per tick (the early-stop test)
+    if (messages[0]?.content === 'long') {
+      let n = 0;
+      while (!opts.signal?.aborted && n < 1000) { opts.onText?.(`${n++} `); await new Promise((r) => setTimeout(r, 1)); }
+      calls.push({ type: 'end', aborted: opts.signal?.aborted ?? false, pieces: n });
+      return { text: '', stopReason: 'aborted' };
+    }
     for (const piece of ['The capital', ' is Paris.']) {
       opts.onToken?.(1); opts.onText?.(piece);
       if (opts.output_modalities?.includes('audio')) opts.onAudio?.(new Float32Array(4));

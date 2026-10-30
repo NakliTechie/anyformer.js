@@ -55,3 +55,19 @@ test('transformers: the pipeline path turns thinking off by default and feeds LF
     transformersBackend.source = was;
   }
 });
+
+test('transformers: a caller that stops reading early interrupts the reply before the next generate starts', async () => {
+  const lfm3 = fixture('LiquidAI_LFM3-1.7B-ONNX');
+  const fake = await import('./fixtures/fake-engines/transformers.js');
+  const was = transformersBackend.source;
+  transformersBackend.source = new URL('./fixtures/fake-engines/transformers.js', import.meta.url).href;
+  try {
+    const s = await transformersBackend.load(lfm3, { caps });
+    for await (const c of s.generate([{ role: 'user', content: 'long' }])) if (c.text.length > 4) break;
+    const end = fake.calls.filter((c) => c.type === 'end').at(-1);
+    assert.equal(end.interrupted, true);
+    assert.ok(end.pieces < 1000);
+  } finally {
+    transformersBackend.source = was;
+  }
+});

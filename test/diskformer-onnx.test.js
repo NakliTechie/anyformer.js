@@ -38,7 +38,7 @@ test('diskformer-onnx: generate streams the engine text cumulatively, thinking o
     assert.equal(g1.opts.do_sample, false);
     assert.equal(g2.opts.enable_thinking, true);
     assert.equal(g2.opts.tools, tools);
-    assert.equal(g2.opts.signal, ac.signal);
+    assert.ok(g2.opts.signal instanceof AbortSignal); // linked to ac.signal; the early-stop test covers the abort
     assert.equal(g2.opts.max_new_tokens, 8);
     assert.equal(g2.messages[0].content[0].audio, wave);
     const spoken = [];
@@ -53,6 +53,28 @@ test('diskformer-onnx: generate streams the engine text cumulatively, thinking o
     assert.ok(fake.calls.some((c) => c.type === 'dispose'));
     await diskformerOnnxBackend.load(omni, { caps, speech: true });
     assert.equal(fake.calls.filter((c) => c.type === 'load').at(-1).opts.speech, true);
+  } finally {
+    diskformerOnnxBackend.source = was;
+  }
+});
+
+test('diskformer-onnx: a caller that stops reading early stops the engine before the next generate starts', async () => {
+  const fake = await import('./fixtures/fake-engines/lfm3_omni.js');
+  const was = diskformerOnnxBackend.source;
+  diskformerOnnxBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  try {
+    const s = await diskformerOnnxBackend.load(omni, { caps });
+    const caller = new AbortController();
+    for await (const c of s.generate([{ role: 'user', content: 'long' }], { signal: caller.signal })) if (c.text.length > 4) break;
+    const end = fake.calls.filter((c) => c.type === 'end').at(-1);
+    assert.equal(end.aborted, true);
+    assert.ok(end.pieces < 1000);
+    assert.equal(caller.signal.aborted, false);
+    // The caller's own abort still reaches the engine.
+    const ac = new AbortController();
+    let n = 0;
+    for await (const _ of s.generate([{ role: 'user', content: 'long' }], { signal: ac.signal })) if (++n === 3) ac.abort();
+    assert.equal(fake.calls.filter((c) => c.type === 'end').at(-1).aborted, true);
   } finally {
     diskformerOnnxBackend.source = was;
   }

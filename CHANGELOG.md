@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- A caller that stops reading a reply early (a `break` out of `for await`, as after a tool call) without aborting
+  now stops the reply on `diskformer-onnx` and `transformers`: the back end aborts the engine call (a linked
+  AbortController for diskformer-onnx, the stopping criteria's interrupt for transformers.js) and waits for it before
+  the next generate() starts. Before, the engine kept generating, and the next reply ran on the same onnxruntime
+  sessions beside it: "failed to call OrtRun() … Failed to download data from buffer" or a hang of over 10 minutes in
+  Chrome (reported by NakliOS, root-caused by LocalMind). `diskformer-llama` already did this.
+
+### Changed
+- diskformer pin 1fe19f8 → 7ffbea5 (v0.6.13: LFM3-Omni serves one reply at a time; changes only
+  `engines/lfm3_omni.js`).
+- Browser tests `omni` and `omni-speech` break out of a reply (text, and spoken at its first speech chunk) without
+  aborting, then require the next reply to equal the text reference within 10 s. Passed 2026-10-30 (Chrome, this Mac,
+  local files), with `transformers` and the LFM3 1.7B `chat` check.
+
 ## 0.4.14 — 2026-10-30
 
 ### Added

@@ -2,7 +2,8 @@
 <!-- LFM3-Omni-2B through anyformer (diskformer-onnx): diskformer's three gate cases (text, image + text, speech;
      test/refs/lfm3-omni at the pinned commit) through session.generate(), greedy, each reply equal to the text Liquid's
      runner produced on onnxruntime's CPU EP. Also: the image reply streams in more than one chunk, an abort ends a
-     reply early without throwing, and a tool list reaches the template (the reply is recorded, not judged).
+     reply early without throwing, a tool list reaches the template (the reply is recorded, not judged), and a caller
+     that breaks out of a reply without aborting leaves the engine free: the next reply equals the text reference.
      ?local=1 reads the repo layout from /models/ (run.mjs --models <folder>) instead of Hugging Face. -->
 <script type="module">
 import * as af from '../../index.js';
@@ -50,10 +51,17 @@ run('omni', async () => {
   const tools = [{ type: 'function', function: { name: 'get_weather', description: 'Current weather for a city', parameters: { type: 'object', properties: { city: { type: 'string' } }, required: ['city'] } } }];
   const tool = await answer(s, [{ role: 'user', content: 'What is the weather in Paris right now?' }], { maxNewTokens: 64, tools });
   log(JSON.stringify({ tool }));
+  // Break out of a 512-token reply after 3 chunks without aborting, then ask again at once.
+  let k = 0;
+  for await (const _ of s.generate([{ role: 'user', content: 'Write a long essay about the history of computing.' }], { maxNewTokens: 512 })) if (++k === 3) break;
+  const t2 = performance.now(), c0 = fx.cases[0];
+  const next = await answer(s, c0.messages, { maxNewTokens: c0.gen.length });
+  const earlyStop = { match: next.text === c0.text.replace(/<\|im_end\|>$/, ''), seconds: +((performance.now() - t2) / 1e3).toFixed(1), text: next.text };
+  log(JSON.stringify({ earlyStop }));
   const deleted = await s.engine.constructor.deleteCache({ baseUrl: s.baseUrl });
   await s.dispose();
   const streamed = cases.find((c) => c.name === 'image')?.chunks > 1;
-  return { ok: cases.every((c) => c.match) && streamed && abort.ended, backend: s.backend, loadSeconds, cases, streamed, abort,
+  return { ok: cases.every((c) => c.match) && streamed && abort.ended && earlyStop.match && earlyStop.seconds < 10, earlyStop, backend: s.backend, loadSeconds, cases, streamed, abort,
     tool: { calls: /get_weather/.test(tool.text), text: tool.text }, cacheFilesDeleted: deleted.length };
 });
 </script>
