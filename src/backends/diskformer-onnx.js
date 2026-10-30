@@ -87,8 +87,12 @@ export const diskformerOnnxBackend = {
         let wake = () => {}, done = false, failed = null, text = '', tokens = 0;
         const msgs = await media(messages);
         const sampleRate = engine.speech?.sampling_rate ?? 24000;
-        engine.generate(msgs, {
-          max_new_tokens: maxNewTokens, do_sample: false, enable_thinking: thinking === true, signal,
+        // The engine reads this signal, linked to the caller's, so a caller that stops reading can end the reply too.
+        const stop = new AbortController();
+        const abort = () => stop.abort();
+        if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true });
+        const job = engine.generate(msgs, {
+          max_new_tokens: maxNewTokens, do_sample: false, enable_thinking: thinking === true, signal: stop.signal,
           ...(tools && { tools }), ...(repetitionPenalty && { repetition_penalty: repetitionPenalty }), ...(seed !== undefined && { seed }),
           ...(speech && {
             output_modalities: ['text', 'audio'],
@@ -100,12 +104,19 @@ export const diskformerOnnxBackend = {
           onToken: () => { tokens++; },
           onText: (delta) => { text += delta; queue.push({ text, tokens }); wake(); },
         }).catch((err) => { failed = err; }).finally(() => { done = true; wake(); });
-        while (true) {
-          if (queue.length) { yield queue.shift(); continue; }
-          if (done) break;
-          await new Promise((r) => { wake = r; });
+        try {
+          while (true) {
+            if (queue.length) { yield queue.shift(); continue; }
+            if (done) break;
+            await new Promise((r) => { wake = r; });
+          }
+          if (failed) throw failed;
+        } finally {
+          signal?.removeEventListener('abort', abort);
+          // The caller stopped reading early (a break after a tool call): stop the reply, so the next call on this
+          // engine's sessions does not run beside it or queue behind it.
+          if (!done) { stop.abort(); await job; }
         }
-        if (failed) throw failed;
       },
       dispose: () => engine.dispose(),
     };

@@ -177,14 +177,21 @@ async function* stream(lib, tokenizer, signal, run) {
     token_callback_function: () => { tokens++; },
   });
   const stop = new lib.InterruptableStoppingCriteria();
-  signal?.addEventListener('abort', () => stop.interrupt(), { once: true });
-  run(streamer, stop).catch((e) => { failed = e; }).finally(() => { done = true; wake(); });
-  while (true) {
-    if (queue.length) { yield queue.shift(); continue; }
-    if (done) break;
-    await new Promise((r) => { wake = r; });
+  const interrupt = () => stop.interrupt();
+  signal?.addEventListener('abort', interrupt, { once: true });
+  const job = run(streamer, stop).catch((e) => { failed = e; }).finally(() => { done = true; wake(); });
+  try {
+    while (true) {
+      if (queue.length) { yield queue.shift(); continue; }
+      if (done) break;
+      await new Promise((r) => { wake = r; });
+    }
+    if (failed) throw failed;
+  } finally {
+    signal?.removeEventListener('abort', interrupt);
+    // The caller stopped reading early: stop the reply so the next call on this model does not run beside it.
+    if (!done) { stop.interrupt(); await job; }
   }
-  if (failed) throw failed;
 }
 
 // A text-only model in the multimodal layout: the causal-LM class over embed_tokens + decoder_model_merged.
