@@ -4,7 +4,7 @@
      does. Passes when the reply's text answers the clip (it names Everest), speech arrives in more than one chunk at
      24 kHz, lasts at least 1 s, and has a speech-like level (RMS 0.01 to 0.3, the reference's is 0.048); when an abort
      from the first speech chunk ends the reply early; and when a text-only reply after it still equals the text
-     reference. The word-level and code-level match is diskformer's gate (test/browser/lfm3-omni-speech.html).
+     reference, also right after a spoken reply the caller broke out of without aborting. The word-level and code-level match is diskformer's gate (test/browser/lfm3-omni-speech.html).
      ?local=1 reads the repo layout from /models/ (run.mjs --models <folder>) instead of Hugging Face. -->
 <script type="module">
 import * as af from '../../index.js';
@@ -43,14 +43,18 @@ run('omni-speech', async () => {
   const ac = new AbortController();
   const aborted = await speak({ seed: 1, signal: ac.signal, onChunk: () => ac.abort() });
   log(JSON.stringify({ aborted }));
+  // Break out of a spoken reply at its first speech chunk without aborting; the text reply below must not wait for it.
+  for await (const k of s.generate(ask, { speech: true, maxNewTokens: 240, seed: 1 })) if (k.audio) break;
   const c = fx.cases[0];
   let text = '';
+  const t3 = performance.now();
   for await (const k of s.generate(c.messages, { maxNewTokens: c.gen.length })) text = k.text;
+  const afterBreakSeconds = +((performance.now() - t3) / 1e3).toFixed(1);
   const textMatch = text === c.text.replace(/<\|im_end\|>$/, '');
   await s.engine.constructor.deleteCache({ baseUrl: s.baseUrl });
   await s.dispose();
   const ok = /everest/i.test(reply.text) && reply.chunks > 1 && reply.sampleRate === 24000 && reply.seconds >= 1 &&
-    reply.rms >= 0.01 && reply.rms <= 0.3 && aborted.chunks <= 2 && aborted.samples < reply.samples && textMatch;
-  return { ok, backend: s.backend, loadSeconds, reply, aborted, textAfterSpeech: { match: textMatch, text } };
+    reply.rms >= 0.01 && reply.rms <= 0.3 && aborted.chunks <= 2 && aborted.samples < reply.samples && textMatch && afterBreakSeconds < 10;
+  return { ok, backend: s.backend, loadSeconds, reply, aborted, textAfterSpeech: { match: textMatch, afterBreakSeconds, text } };
 });
 </script>
