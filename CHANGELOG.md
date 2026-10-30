@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.15 — 2026-10-30
 
 ### Fixed
 - A caller that stops reading a reply early (a `break` out of `for await`, as after a tool call) without aborting
