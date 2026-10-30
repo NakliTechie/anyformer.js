@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.14 — 2026-10-30
 
 ### Added
 - `diskformer-onnx`: LFM3-Omni speech out. `load(MODELS.chat.LFM3_OMNI_2B, { speech: true })` also fetches the depth
