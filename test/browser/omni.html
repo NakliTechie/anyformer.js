@@ -1,0 +1,59 @@
+<!doctype html><meta charset="utf-8"><title>omni</title>
+<!-- LFM3-Omni-2B through anyformer (diskformer-onnx): diskformer's three gate cases (text, image + text, speech;
+     test/refs/lfm3-omni at the pinned commit) through session.generate(), greedy, each reply equal to the text Liquid's
+     runner produced on onnxruntime's CPU EP. Also: the image reply streams in more than one chunk, an abort ends a
+     reply early without throwing, and a tool list reaches the template (the reply is recorded, not judged).
+     ?local=1 reads the repo layout from /models/ (run.mjs --models <folder>) instead of Hugging Face. -->
+<script type="module">
+import * as af from '../../index.js';
+import { run, log } from './harness.js';
+const q = new URLSearchParams(location.search);
+if (q.get('local')) af.diskformerOnnxBackend.url = () => `${location.origin}/models/`;
+const refs = `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer') || af.PINS.diskformer}/test/refs/lfm3-omni/`;
+const get = async (f) => (await fetch(refs + f)).arrayBuffer();
+// One reply: the last chunk's text, the number of chunks, the token count.
+async function answer(s, messages, opts) {
+  let text = '', chunks = 0, tokens = 0;
+  for await (const c of s.generate(messages, opts)) { text = c.text; tokens = c.tokens; chunks++; }
+  return { text, chunks, tokens };
+}
+run('omni', async () => {
+  const fx = await (await fetch(refs + 'fixture.json')).json();
+  const rgb = new Uint8Array(await get(fx.image.file));
+  const wave = Float32Array.from(new Int16Array(await get(fx.speech.file)), (x) => x / 32768);
+  const t0 = performance.now();
+  let last = '';
+  const s = await af.load(af.MODELS.chat.LFM3_OMNI_2B, {
+    onProgress: (p) => { const t = `${p.backend} ${p.status || ''} ${p.file || ''} ${p.loaded ?? ''}/${p.total ?? ''}`; if (t !== last && Date.now() % 5 === 0) log(last = t); },
+  });
+  const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
+  log(`loaded by ${s.backend} in ${loadSeconds} s`);
+  const part = (p) => (p.type === 'image' ? { type: 'image', image: { data: rgb, width: fx.image.width, height: fx.image.height, channels: 3 } }
+    : p.type === 'audio' ? { type: 'audio', audio: wave } : p);
+  const cases = [];
+  for (const c of fx.cases) {
+    const messages = c.messages.map((m) => ({ ...m, content: m.content.map(part) }));
+    const want = c.text.replace(/<\|im_end\|>$/, '');
+    const t1 = performance.now();
+    const r = await answer(s, messages, { maxNewTokens: c.gen.length });
+    const row = { name: c.name, match: r.text === want, chunks: r.chunks, tokens: r.tokens, seconds: +((performance.now() - t1) / 1e3).toFixed(1), text: r.text, ...(r.text !== want && { want }) };
+    cases.push(row); log(JSON.stringify(row));
+  }
+  // Abort after the third chunk of a 64-token reply.
+  const ac = new AbortController();
+  let n = 0, abortText = '';
+  for await (const c of s.generate([{ role: 'user', content: 'Explain what a CPU does in four sentences.' }], { maxNewTokens: 64, signal: ac.signal })) {
+    abortText = c.text; if (++n === 3) ac.abort();
+  }
+  const abort = { chunks: n, ended: n <= 4, text: abortText };
+  log(JSON.stringify({ abort }));
+  const tools = [{ type: 'function', function: { name: 'get_weather', description: 'Current weather for a city', parameters: { type: 'object', properties: { city: { type: 'string' } }, required: ['city'] } } }];
+  const tool = await answer(s, [{ role: 'user', content: 'What is the weather in Paris right now?' }], { maxNewTokens: 64, tools });
+  log(JSON.stringify({ tool }));
+  const deleted = await s.engine.constructor.deleteCache({ baseUrl: s.baseUrl });
+  await s.dispose();
+  const streamed = cases.find((c) => c.name === 'image')?.chunks > 1;
+  return { ok: cases.every((c) => c.match) && streamed && abort.ended, backend: s.backend, loadSeconds, cases, streamed, abort,
+    tool: { calls: /get_weather/.test(tool.text), text: tool.text }, cacheFilesDeleted: deleted.length };
+});
+</script>

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `diskformer-onnx` back end: ONNX exports that transformers.js has no model class for, run by a diskformer hand
+  engine on onnxruntime-web WebGPU (the engine pins onnxruntime-web 1.30.0). Ranks second, after `transformers`, so
+  transformers.js takes a model over once it adds the class. Streams text, passes `signal` (an abort ends the reply
+  quietly), `thinking` (off by default), `tools` (tool calls stay raw text) and `repetitionPenalty`; image blocks take
+  ImageData, ImageBitmap, a URL or `{ data, width, height }`, audio blocks a 16 kHz Float32Array of at most 30 s.
+  `session.baseUrl` names the URLs its Cache Storage entries ('diskformer-models', listed by `stored()`) are keyed by.
+- `MODELS.chat.LFM3_OMNI_2B`: `LiquidAI/LFM3-Omni-2B-ONNX` (task `any-to-any`, 2.14 GB: decoder_q4f16,
+  vision_encoder_q8, audio_encoder) on `diskformer-onnx`, asked for by LocalMind for Chirag. Browser test `omni`
+  (Chrome, this Mac, 2026-10-30), from local files and from Hugging Face: diskformer's three gate cases through
+  `session.generate()` equal the text Liquid's runner gives on onnxruntime's CPU EP (text 7 tokens, image 32, speech
+  32); the image reply streams in 32 chunks; an abort after 3 chunks ends the reply; a `get_weather` tool list gives a
+  Qwen3-Coder XML tool call.
+
+### Changed
+- diskformer pin 53c976e (v0.6.9) → 48f2c2a (`engines/lfm3_omni.js`; adds files only, no other engine changed).
+- `test/browser/run.mjs --models` serves subfolders (a repo layout), still only inside the named folders.
+
 ## 0.4.12 — 2026-10-29
 
 ### Changed

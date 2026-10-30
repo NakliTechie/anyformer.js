@@ -7,12 +7,14 @@ import { diskformerBackend } from './backends/diskformer.js';
 import { diskformerLlamaBackend } from './backends/diskformer-llama.js';
 import { localmindBackend } from './backends/localmind.js';
 import { wllamaBackend } from './backends/wllama.js';
+import { diskformerOnnxBackend } from './backends/diskformer-onnx.js';
 import { AnyformerError, wrap } from './errors.js';
 
 // Back ends land here as each one passes its browser test (test/browser/). The list order breaks ties: a
 // diskformer hand engine carries a measured speed and outranks diskformer-llama for the same model; diskformer-llama
-// comes before wllama because it pages experts instead of holding the whole model on the GPU.
-export const BACKENDS = [transformersBackend, kohraBackend, diskformerBackend, localmindBackend, diskformerLlamaBackend, wllamaBackend];
+// comes before wllama because it pages experts instead of holding the whole model on the GPU. diskformer-onnx runs only
+// the ONNX architectures transformers.js has no class for, so transformers.js wins once it adds one.
+export const BACKENDS = [transformersBackend, diskformerOnnxBackend, kohraBackend, diskformerBackend, localmindBackend, diskformerLlamaBackend, wllamaBackend];
 
 // 2.5 GB: the smallest budget diskformer's chat gate passes at. Browsers do not report GPU memory, so a caller that
 // knows more passes { budget }.
@@ -128,7 +130,8 @@ function serialize(session) {
   };
   // Read live from the back end's session, never copied: the engine instance it built (diskformer and localmind back
   // ends; read-only, for token-level work a caller already does with the engine; calls on it bypass the queue),
-  // Gemma 4's PLE mode, and Bonsai's speculative decoding state, which changes after load.
-  for (const k of ['engine', 'pleMode', 'speculative']) if (k in session) Object.defineProperty(out, k, { get: () => session[k], enumerable: true });
+  // Gemma 4's PLE mode, Bonsai's speculative decoding state, which changes after load, and diskformer-onnx's baseUrl
+  // (its Cache Storage keys).
+  for (const k of ['engine', 'pleMode', 'speculative', 'baseUrl']) if (k in session) Object.defineProperty(out, k, { get: () => session[k], enumerable: true });
   return out;
 }

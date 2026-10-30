@@ -22,12 +22,12 @@ const chat = name === 'diskformer-chat';
 const root = realpathSync(new URL('../..', import.meta.url).pathname);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json' };
 
-// --models <dir>[,<dir>…]: serve the GGUFs in those folders at /models/<file name>, with Range requests, so a test can
-// copy a model into OPFS from this disk instead of Hugging Face (llama-gate's ?local=1).
+// --models <dir>[,<dir>…]: serve the files in those folders at /models/<path> (a repo layout keeps its subfolders), with
+// Range requests, so a test can copy a model into OPFS from this disk instead of Hugging Face (llama-gate's ?local=1).
 const modelDirs = (arg('models') || '').split(',').filter(Boolean);
 async function serveModel(req, res, file) {
   let p = null;
-  for (const d of modelDirs) { const c = join(d, file); if (!file.includes('/') && await stat(c).then((s) => s.isFile(), () => false)) { p = c; break; } }
+  for (const d of modelDirs) { const c = join(d, file); if (c.startsWith(join(d, sep)) && await stat(c).then((s) => s.isFile(), () => false)) { p = c; break; } }
   if (!p) { res.writeHead(404).end(); return; }
   const size = (await stat(p)).size;
   const m = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
