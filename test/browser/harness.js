@@ -1,4 +1,4 @@
-import { kohraBackend, diskformerBackend, localmindBackend, transformersBackend } from '../../index.js';
+import { kohraBackend, diskformerBackend, diskformerOnnxBackend, localmindBackend, transformersBackend } from '../../index.js';
 
 // ?kohra=<sha>&diskformer=<sha> (set by run.mjs): load those commits instead of jsDelivr's cached @main.
 // ?localmind=<sha> loads LocalMind's engines from that LocalMind commit instead of diskformer's engines/ (an A/B).
@@ -7,7 +7,7 @@ if (q.get('kohra')) kohraBackend.source = `https://cdn.jsdelivr.net/gh/NakliTech
 // ?tjs=<version> loads that transformers.js release instead of the pinned one.
 if (q.get('tjs')) transformersBackend.source = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${q.get('tjs')}/+esm`;
 if (q.get('localmind')) localmindBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/LocalMind@${q.get('localmind')}/src`;
-if (q.get('diskformer')) diskformerBackend.source = localmindBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer')}/engines`;
+if (q.get('diskformer')) diskformerBackend.source = diskformerOnnxBackend.source = localmindBackend.source = `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer')}/engines`;
 
 // Shared by the test pages: progress to window.progressText, the outcome to window.result and the title.
 export const out = document.body.appendChild(document.createElement('pre'));

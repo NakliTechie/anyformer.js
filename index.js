@@ -14,4 +14,5 @@ export { stored, remove } from './src/store.js';
 export { pipeline } from './src/pipeline.js';
 export { localmindBackend } from './src/backends/localmind.js';
 export { wllamaBackend } from './src/backends/wllama.js';
+export { diskformerOnnxBackend, ONNX_ENGINES } from './src/backends/diskformer-onnx.js';
 export { PINS, SOURCES } from './src/sources.js';
