@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.13 — 2026-10-30
 
 ### Added
 - `diskformer-onnx` back end: ONNX exports that transformers.js has no model class for, run by a diskformer hand
