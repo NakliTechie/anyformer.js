@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.17 — 2026-10-30
 
 ### Added
 - `MODELS.chat.CLOVER_35B_A3B`: Diffuspace's Clover-35B-A3B-Preview (Apache-2.0), block diffusion on Qwen3.6-35B-A3B,
