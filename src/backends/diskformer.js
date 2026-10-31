@@ -11,11 +11,15 @@ export const DISKFORMER_MODELS = [
   {
     repo: 'google/gemma-4-26B-A4B-it-qat-q4_0-gguf', file: 'gemma-4-26B_q4_0-it.gguf', size: 14439363584,
     engine: 'gemma4_moe_ssd.js', Engine: 'Gemma4MoeSsd', minBudget: 2.5e9,
+    // LoRA at run time (v0.6.20+, gated against llama-server --lora on the same adapter file).
+    adapters: true,
     speeds: [[2.5e9, 12.4], [4.3e9, 14.2], [7e9, 17.9]],
   },
   {
     repo: 'unsloth/Qwen3.6-35B-A3B-GGUF', file: 'Qwen3.6-35B-A3B-Q8_0.gguf', size: 36903140320,
     engine: 'qwen35_moe_ssd.js', Engine: 'Qwen35MoeSsd', minBudget: 4e9,
+    // LoRA at run time (v0.6.20+, gated against llama-server --lora on the same adapter file).
+    adapters: true,
     speeds: [[4e9, 9.2]],
   },
   // Qwen3.6's language model with a vision encoder (mmproj, ~1.1 GB, loaded on the first image by ensureVision).

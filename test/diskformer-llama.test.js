@@ -173,9 +173,12 @@ test('an adapter routes to the engines that apply one: diskformer\'s LFM2.5 engi
   assert.equal(p.adapter.file, 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf');
   // Without the hand engine, the llama.cpp path applies it.
   assert.equal((await plan(pi, { model: lfm24, caps: full, backends: [diskformerLlamaBackend, wllamaBackend] })).chosen, 'diskformer-llama');
-  // A model whose hand engine has no adapter support drops diskformer from the plan.
+  // Gemma 4's hand engine applies one too (diskformer v0.6.20); Clover's has no adapter support, so it drops diskformer.
   const g = await plan(gemma.repo, { model: gemma, caps: full, budget: 4e9, adapter: pi.adapter });
-  assert.ok(!g.candidates.some((c) => c.backend === 'diskformer'));
+  assert.equal(g.chosen, 'diskformer');
+  const clover = fixture('Diffuspace_Clover-35B-A3B-Preview-GGUF');
+  const c = await plan(clover.repo, { model: clover, caps: full, budget: 4e9, adapter: pi.adapter });
+  assert.ok(!c.candidates.some((x) => x.backend === 'diskformer'));
 });
 
 test('diskformer: load applies the adapter at run time; setAdapter switches it off and on through load()', async () => {

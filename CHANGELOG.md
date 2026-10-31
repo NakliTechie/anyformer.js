@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.21 — 2026-10-31
+
+### Changed
+- diskformer pin cefebc7 → 7962912 (v0.6.20: run-time LoRA in every native MoE engine through `engines/lora.js`).
+  The `diskformer` back end now takes `adapter` on Gemma 4 26B and Qwen3.6 35B too. diskformer's gates (plain /
+  adapter / plain again, against llama-server --lora on the same file): Gemma 4 26B 9/9, 8/9, 9/9; Qwen3.6 35B 6/9,
+  9/9, 6/9. Adapters on routed experts are refused with an error. MiniCPM-V, Clover, Flint and Ling take no adapter,
+  so an `adapter` drops `diskformer` from their plans.
+
+### Not yet verified
+- No browser run of an adapter on Gemma 4 or Qwen3.6 through anyformer: no adapter GGUF for either is in the catalog.
+
 ## 0.4.20 — 2026-10-31
 
 ### Added
