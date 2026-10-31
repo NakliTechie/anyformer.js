@@ -71,8 +71,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let ws;
 for (let k = 0; k < 100 && !ws; k++) { try { const t = (await (await fetch(`http://127.0.0.1:${cdp}/json`)).json()).find((x) => x.type === 'page'); ws = new WebSocket(t.webSocketDebuggerUrl); } catch { await sleep(200); } }
 await new Promise((r) => { ws.onopen = r; });
-let id = 0; const pend = new Map(); ws.onmessage = (e) => { const m = JSON.parse(e.data); if (pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } };
+// Failed requests go to stderr with their reason, because a page only sees "Failed to fetch".
+const urls = new Map();
+let id = 0; const pend = new Map(); ws.onmessage = (e) => {
+  const m = JSON.parse(e.data);
+  if (pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); }
+  if (m.method === 'Network.requestWillBeSent') urls.set(m.params.requestId, `${m.params.request.method} ${m.params.request.url.slice(0, 160)}`);
+  if (m.method === 'Network.loadingFailed' && !m.params.canceled) console.error(`request failed: ${urls.get(m.params.requestId)}: ${m.params.errorText}${m.params.corsErrorStatus ? ` (CORS ${m.params.corsErrorStatus.corsError})` : ''}`);
+};
 const send = (method, params = {}) => new Promise((r) => { const n = ++id; pend.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });
+await send('Network.enable');
 const ev = async (expression) => (await send('Runtime.evaluate', { expression, returnByValue: true })).result?.result?.value;
 
 await send('Page.navigate', { url: `http://127.0.0.1:${port}/${path}?${q}` });

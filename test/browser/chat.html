@@ -1,25 +1,47 @@
 <!doctype html><meta charset="utf-8"><title>chat</title>
 <!-- One chat reply through anyformer, checked on topic: ?repo=<Hub id> (default LFM2.5 230M GGUF), ?budget=<GB>,
      ?backend=<id> to use one back end, registered or not (default: the resolver's choice among BACKENDS),
-     ?dtype=<precision> to override the back end's pick, ?local=1 to read a diskformer GGUF from run.mjs's --models folder. A reply with <think> text fails: thinking is off by default. -->
+     ?dtype=<precision> to override the back end's pick, ?entry=<family>.<KEY> to load a MODELS entry (its budget and
+     adapter apply), ?local=1 to read GGUFs and adapters from run.mjs's --models folders by file name (diskformer,
+     diskformer-llama, and through the engines' fetch, localmind). A reply with <think> text fails: thinking is off by default. -->
 <script type="module">
 import * as af from '../../index.js';
 import { run, log, reply, onTopic } from './harness.js';
 const q = new URLSearchParams(location.search);
-if (q.get('local')) af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
+const local = (name) => `${location.origin}/models/${name.split('/').pop()}`;
+if (q.get('local')) {
+  af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
+  af.diskformerLlamaBackend.url = (model, f) => local(f.name);
+}
+const localFetch = (u, o) => fetch(typeof u === 'string' && u.includes('/resolve/') ? local(u.split('?')[0]) : u, o);
+const [family, key] = (q.get('entry') || '').split('.');
 const only = q.get('backend') && Object.values(af).find((b) => b?.id === q.get('backend') && b.canRun);
 run('chat', async () => {
   const t0 = performance.now();
   let last = '';
-  const s = await af.load(q.get('repo') || 'LiquidAI/LFM2.5-230M-GGUF', {
-    ...(only && { backends: [only] }), budget: Number(q.get('budget') || 2.5) * 1e9,
+  const s = await af.load(key ? af.MODELS[family][key] : q.get('repo') || 'LiquidAI/LFM2.5-230M-GGUF', {
+    ...(only && { backends: [only] }), ...((q.get('budget') || !key) && { budget: Number(q.get('budget') || 2.5) * 1e9 }),
+    ...(q.get('local') && { fetch: localFetch }),
     ...(q.get('dtype') && { dtype: q.get('dtype') }),
     onProgress: (p) => { const t = `${p.backend} ${p.engine || ''} ${p.status || p.phase || ''} ${p.file || ''} ${p.loaded ?? ''}/${p.total ?? ''}`; if (t !== last && Date.now() % 3 === 0) log(last = t); },
   });
   const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
   log(`loaded by ${s.backend} in ${loadSeconds} s`);
-  const r = await reply(s, [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }], 64);
+  const msgs = [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }];
+  const maxNew = Number(q.get('tokens') || 64);   // ?tokens=N: a longer reply, for a model that reasons first
+  const r = await reply(s, msgs, maxNew);
+  // ?turns=N (up to 4): follow-up questions that need the earlier turns; each reply must name its topic, not loop,
+  // and carry no <think> text.
+  const follow = [['And what does RAM do?', /memory|store|data/i], ['Which of the two is faster?', /CPU|cache|RAM|faster/i],
+    ['Summarise both in one sentence.', /CPU/i]].slice(0, Number(q.get('turns') || 1) - 1);
+  const turns = [];
+  for (const [question, topic] of follow) {
+    msgs.push({ role: 'assistant', content: (turns.at(-1) || r).text }, { role: 'user', content: question });
+    const t = await reply(s, msgs, maxNew);
+    turns.push({ question, ok: topic.test(t.text) && onTopic(t.text + ' process') && !/<\/?think>/.test(t.text), ...t });
+    log(`turn ${turns.length + 1}: ${t.text}`);
+  }
   await s.dispose();
-  return { ok: onTopic(r.text) && !/<\/?think>/.test(r.text), backend: s.backend, repo: s.plan.model.repo, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(s.device && { device: s.device }), loadSeconds, ...r };
+  return { ok: onTopic(r.text) && !/<\/?think>/.test(r.text) && turns.every((t) => t.ok), backend: s.backend, repo: s.plan.model.repo, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(s.device && { device: s.device }), loadSeconds, ...r, ...(turns.length && { turns }) };
 });
 </script>

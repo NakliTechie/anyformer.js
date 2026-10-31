@@ -29,16 +29,19 @@ function noBackend(plan) {
 // What load() would do, without loading: the descriptor, the caps, and every back end's answer.
 // task: a Hugging Face pipeline task ('text-generation', 'feature-extraction', …); null runs the repo's own.
 // file: a weights file in the repo to load (a GGUF name); null lets each back end pick.
-// repo: a Hub id, or an entry from MODELS (its task and budget apply unless opts set them).
+// repo: a Hub id, or an entry from MODELS (its task, budget and adapter apply unless opts set them).
+// adapter: a LoRA GGUF applied over the model, { repo, file, revision, size, scale }; only a back end with
+// `adapters: true` (diskformer-llama) can apply one, so the others drop out of the plan.
 const entry = (repo, opts) => (typeof repo === 'object' && repo?.repo
-  ? [repo.repo, { ...(repo.task && { task: repo.task }), ...(repo.budget && { budget: repo.budget }), ...opts }]
+  ? [repo.repo, { ...(repo.task && { task: repo.task }), ...(repo.budget && { budget: repo.budget }), ...(repo.adapter && { adapter: repo.adapter }), ...opts }]
   : [repo, opts]);
 
 export async function plan(repoOrEntry, opts = {}) {
-  let [repo, { budget = DEFAULT_BUDGET, task = null, file = null, backends = BACKENDS, caps, model, fetch }] = entry(repoOrEntry, opts);
+  let [repo, { budget = DEFAULT_BUDGET, task = null, file = null, backends = BACKENDS, caps, model, fetch, adapter = null }] = entry(repoOrEntry, opts);
   caps ??= await probe();
   model ??= await describe(repo, fetch ? { fetch } : {});
-  return { model, caps, budget, task, file, ...(await resolve(model, caps, backends, { budget, task, file })) };
+  if (adapter) backends = backends.filter((b) => b.adapters);
+  return { model, caps, budget, task, file, ...(adapter && { adapter }), ...(await resolve(model, caps, backends, { budget, task, file })) };
 }
 
 export async function load(repoOrEntry, options = {}) {
@@ -50,7 +53,7 @@ export async function load(repoOrEntry, options = {}) {
   const backend = backends.find((b) => b.id === p.chosen);
   let session;
   try {
-    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, speech, onProgress, signal });
+    session = await backend.load(p.model, { budget: p.budget, task: p.task, file: p.file, adapter: p.adapter, caps: p.caps, maxCtx, dtype, poolBytes, localFile, fetch: engineFetch, ple, speculative, speech, onProgress, signal });
   } catch (e) { throw wrap(e, 'LOAD_FAILED', signal, `${backend.id}: `); }
   // Added onto serialize()'s object, not spread: a spread would read its getters once and freeze them.
   return Object.assign(serialize(session), { backend: backend.id, task: session.task || p.task || p.model.task || null, ...(session.device && { device: session.device }), plan: p });

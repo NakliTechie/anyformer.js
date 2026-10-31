@@ -76,8 +76,8 @@ and `threw`. Every other failure is an `AnyformerError` too, with a code from `E
 ## Commands
 
 ```js
-plan(repo, { budget, task })      // what would run it, and why the others would not; loads nothing
-load(repo, { budget, task, file, maxCtx, poolBytes, localFile, fetch, ple, speculative, onProgress, signal })  // → { backend, task, plan, run(input), generate?, think?, prime?, reset?, speculative?, dispose() }
+plan(repo, { budget, task })      // what would run it (adapter: a LoRA GGUF; only diskformer-llama applies one), and why the others would not; loads nothing
+load(repo, { budget, task, file, adapter, maxCtx, poolBytes, localFile, fetch, ple, speculative, onProgress, signal })  // → { backend, task, plan, run(input), generate?, think?, prime?, reset?, speculative?, dispose() }
 pipeline(task, repo, { budget })  // transformers.js's call shape: gen(messages) → [{ generated_text }]
 probe()                           // WebGPU, shader-f16, subgroups, limits, OPFS quota, memory64
 describe(repo)                    // Hub repo → formats, architecture, task, tags, files

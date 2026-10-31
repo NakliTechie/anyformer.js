@@ -9,6 +9,11 @@ export const PINS = {
   // v0.3.1: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data; download progress
   // (progress_callback) and the graph files cached in Cache Storage 'kohra-models'.
   kohra: 'bf95d44c3e3cfc001201baa03fa121c2bf9c7d73',
+  // v0.6.17 (314362e): LoRA adapters on the llama.cpp path (llama.load({ lora, loraScale })), and lfm2_moe_ssd.js runs
+  // a LoRA-merged LFM2.5-24B-A2B with Q8_0 dense matrices.
+  // v0.6.16 (467052f): engines/subgroup-matrix-guard.js. Chrome 156 rejects mixed f16/f32 subgroup-matrix kernels
+  // on Apple GPUs; the guard hides the feature when one tiny mixed kernel fails to compile, so Ternary Bonsai 2 27B,
+  // Gemma 4 E2B, LFM2.5 and qwen3_moe_ssd.js take their non-matrix prefill (slower prefill, same output path).
   // v0.6.15 (f17009c): engines/clover_moe_ssd.js, Clover-35B-A3B-Preview (block diffusion on Qwen3.6-35B-A3B; kohra's
   // denoise loop vendored in engines/vendor/). qwen35_moe_ssd.js and qwen3_moe_ssd.js only learn to accept clover_moe.
   // v0.6.14 (93193d0): LFM3-Omni speech out's inverse STFT uses an FFT (same samples), 0.54x → 1.5–1.8x real time on
@@ -23,7 +28,7 @@ export const PINS = {
   // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/, which loads split GGUFs
   // and drafters, and reads past 2 GiB (Nemotron 3.5 Bolt E4B needs v0.6.8 or later). The hand engines' ingest
   // streams the GGUF header with progress and resumes a dropped range.
-  diskformer: 'f17009cc31e15361af7ae5536e8f55cb43c5066f',
+  diskformer: '314362e907787ab28408a4e3e737fcf4b661e5c6',
 };
 
 const gh = (repo, sha, path) => `https://cdn.jsdelivr.net/gh/NakliTechie/${repo}@${sha}/${path}`;

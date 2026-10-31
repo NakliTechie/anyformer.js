@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fromHubInfo, plan, BACKENDS, REFUSALS, diskformerLlamaBackend, diskformerBackend, wllamaBackend } from '../index.js';
+import { fromHubInfo, plan, BACKENDS, MODELS, REFUSALS, diskformerLlamaBackend, diskformerBackend, wllamaBackend } from '../index.js';
 import { pickGguf } from '../src/backends/diskformer-llama.js';
 
 const fixture = (name) => fromHubInfo(JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url))));
@@ -156,6 +156,48 @@ test('diskformer-llama: load downloads the side file with the parts and passes i
     assert.deepEqual(load.extra, ['DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf']);
     assert.equal(load.budget, 8e9);
     assert.equal(Object.keys(JSON.parse(files.get('anyformer-llama.json'))).length, 5);
+    s.dispose();
+  } finally {
+    diskformerLlamaBackend.source = was.source;
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: was.navigator });
+  }
+});
+
+const lfm24 = fixture('LiquidAI_LFM2.5-24B-A2B-GGUF');
+
+test('diskformer-llama: an adapter routes past the hand engine to the llama.cpp path, which alone applies one', async () => {
+  const pi = MODELS.chat.LFM2_5_24B_PI;
+  assert.equal((await plan(lfm24.repo, { model: lfm24, caps: full, budget: 4e9 })).chosen, 'diskformer');
+  const p = await plan(pi, { model: lfm24, caps: full });
+  assert.equal(p.chosen, 'diskformer-llama');
+  assert.deepEqual(p.candidates.map((c) => c.backend), ['diskformer-llama']);
+  assert.equal(p.adapter.file, 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf');
+  assert.deepEqual(BACKENDS.filter((b) => b.adapters).map((b) => b.id), ['diskformer-llama']);
+});
+
+test('diskformer-llama: load downloads the adapter beside the model and passes it to llama.load as lora', async () => {
+  const fake = await import('./fixtures/fake-engines/llama.js');
+  fake.calls.length = 0;
+  const was = { source: diskformerLlamaBackend.source, navigator: globalThis.navigator };
+  const files = new Map();
+  const handle = (name) => ({
+    getFile: async () => ({ text: async () => files.get(name) ?? (() => { throw new Error('none'); })() }),
+    createWritable: async () => ({ write: async (t) => files.set(name, t), close: async () => {} }),
+  });
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { storage: { getDirectory: async () => ({ getFileHandle: async (n) => handle(n) }) } } });
+  diskformerLlamaBackend.source = new URL('./fixtures/fake-engines/llama.js', import.meta.url).href;
+  try {
+    const { adapter } = MODELS.chat.LFM2_5_24B_PI;
+    const seen = [];
+    const s = await diskformerLlamaBackend.load(lfm24, { budget: 4e9, adapter: { ...adapter, scale: 0.5 }, onProgress: (e) => seen.push(e) });
+    const downloads = fake.calls.filter((c) => c.type === 'download');
+    assert.deepEqual(downloads.map((d) => d.name), ['LFM2.5-24B-A2B-QAD-Q4_0.gguf', 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf']);
+    assert.equal(downloads[1].url, `https://huggingface.co/harness-hub/LFM2.5-24B-A2B-pi-GGUF/resolve/${adapter.revision}/LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf`);
+    const load = fake.calls.find((c) => c.type === 'load');
+    assert.equal(load.lora, 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf');
+    assert.equal(load.loraScale, 0.5);
+    assert.equal(seen.filter((e) => e.status === 'download').at(-1).loaded, 13578190880 + 37437888);
+    assert.equal(JSON.parse(files.get('anyformer-llama.json'))['LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf'], adapter.repo);
     s.dispose();
   } finally {
     diskformerLlamaBackend.source = was.source;

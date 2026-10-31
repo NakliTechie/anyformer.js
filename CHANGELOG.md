@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.4.18 — 2026-10-31
+
+### Added
+- LoRA adapters: `load(repo, { adapter: { repo, file, revision, size, scale } })` (or an entry carrying `adapter`)
+  downloads the adapter GGUF into OPFS beside the model and applies it at `scale` on `diskformer-llama`, the only back
+  end with `adapters: true`; the others drop out of the plan. Needs diskformer v0.6.17.
+- `MODELS.chat.LFM2_5_24B_PI`: LFM2.5-24B-A2B (QAD-Q4_0) with harness-hub's Pi coding-agent LoRA
+  (`harness-hub/LFM2.5-24B-A2B-pi-GGUF` at a994cf7, 37.4 MB), 4 GB budget, `experimental`, `license: 'lfm1.0'`.
+  diskformer's gate (v0.6.17): 8/9 replies identical to llama-server --lora (7/9 without the adapter, the path's own
+  baseline). The adapter was trained inside the Pi agent; elsewhere expect base-model behaviour or worse. Hub fixture
+  at 0912d33.
+
+### Changed
+- diskformer pin f17009c → 314362e (v0.6.17, which includes v0.6.16). v0.6.16: Chrome 156 rejects mixed f16/f32 subgroup-matrix kernels on Apple GPUs,
+  so Ternary Bonsai 2 27B, Gemma 4 E2B, LFM2.5 and the IQ-quant dense path failed to load ("Mixed precision subgroup
+  matrix multiply is not supported by the device"). diskformer's new `engines/subgroup-matrix-guard.js` hides the
+  feature when a tiny mixed kernel fails to compile, and those engines take their non-matrix prefill (slower prefill).
+- Browser tests: `chat` takes `?turns=N` (up to 4 follow-up turns, each checked on topic); `vision` takes `?backend=`
+  and `?local=1` (MiniCPM-V 4.7 on diskformer, image as packed RGB after `ensureVision()`); `run.mjs` prints each
+  failed network request with its reason. `vision?local=1` serves `cats.jpg` from `--models` as well. `chat` also takes
+  `?entry=<family>.<KEY>` (a MODELS entry, adapter included) and `?tokens=N`; its `?local=1` serves diskformer-llama
+  GGUFs, adapters and (through the engines' fetch) localmind GGUFs by file name.
+
+### Known limitation
+- LFM2.5-24B-A2B's chat template always opens a `<think>` block and ignores `enable_thinking`, so on
+  `diskformer-llama` a reply with thinking off still starts with visible reasoning, then `</think>`, then the answer.
+  The fix belongs in diskformer's chat driver (close the block when thinking is off).
+
+### Verified
+- `LFM2_5_24B_PI` through anyformer (browser `chat?entry=chat.LFM2_5_24B_PI&local=1&tokens=400`, Chrome 156, this
+  Mac, 11:56 IST, base GGUF and adapter from local files, adapter sha256 5e96d059…, diskformer 314362e): loaded with
+  the adapter in 208.9 s; reasoning, `</think>`, then a correct two-sentence answer about the CPU; 162 tokens at
+  2.73 tok/s. The page reports FAIL because its check rejects `</think>` text (the limitation above). A 4-turn run at
+  64 tokens per reply spent each reply on reasoning (1.5–3.0 tok/s).
+- MiniCPM-V 4.7 image round trip through anyformer (browser `vision`, Chrome 156, this Mac, 11:12 IST, GGUF, vision
+  encoder and image from local files, 6.5 GB budget, diskformer f17009c): "There are **two cats** in this picture",
+  then a correct description, 40 tokens at 18.3 tok/s.
+
 ## 0.4.17 — 2026-10-30
 
 ### Added
