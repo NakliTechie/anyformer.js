@@ -9,7 +9,12 @@
   feature when a tiny mixed kernel fails to compile, and those engines take their non-matrix prefill (slower prefill).
 - Browser tests: `chat` takes `?turns=N` (up to 4 follow-up turns, each checked on topic); `vision` takes `?backend=`
   and `?local=1` (MiniCPM-V 4.7 on diskformer, image as packed RGB after `ensureVision()`); `run.mjs` prints each
-  failed network request with its reason.
+  failed network request with its reason. `vision?local=1` serves `cats.jpg` from `--models` as well.
+
+### Verified
+- MiniCPM-V 4.7 image round trip through anyformer (browser `vision`, Chrome 156, this Mac, 11:12 IST, GGUF, vision
+  encoder and image from local files, 6.5 GB budget, diskformer f17009c): "There are **two cats** in this picture",
+  then a correct description, 40 tokens at 18.3 tok/s.
 
 ## 0.4.17 — 2026-10-30
 

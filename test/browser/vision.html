@@ -1,13 +1,14 @@
 <!doctype html><meta charset="utf-8"><title>vision</title>
 <!-- An image in a chat message: ?repo= a multimodal repo (default Qwen3.5 4B ONNX), ?budget= GB (default 8),
      ?backend=<id> (default transformers). On diskformer (MiniCPM-V 4.7) the image goes as packed RGB bytes after
-     ensureVision(); ?local=1 reads the GGUF and the vision encoder from run.mjs's --models folder.
+     ensureVision(); ?local=1 reads the GGUF, the vision encoder and cats.jpg from run.mjs's --models folders.
      Two cats on a sofa (transformers.js's docs image); PASS when the reply names cats. -->
 <script type="module">
 import * as af from '../../index.js';
 import { run, log, reply } from './harness.js';
 const q = new URLSearchParams(location.search);
-const IMAGE = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/cats.jpg';
+// With ?local=1 the image comes from --models too, so the check needs no network.
+const IMAGE = q.get('local') ? `${location.origin}/models/cats.jpg` : 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/cats.jpg';
 const backend = Object.values(af).find((b) => b?.id === (q.get('backend') || 'transformers') && b.canRun);
 if (q.get('local')) {
   af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
