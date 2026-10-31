@@ -165,14 +165,43 @@ test('diskformer-llama: load downloads the side file with the parts and passes i
 
 const lfm24 = fixture('LiquidAI_LFM2.5-24B-A2B-GGUF');
 
-test('diskformer-llama: an adapter routes past the hand engine to the llama.cpp path, which alone applies one', async () => {
+test('an adapter routes to the engines that apply one: diskformer\'s LFM2.5 engine first, then diskformer-llama', async () => {
   const pi = MODELS.chat.LFM2_5_24B_PI;
-  assert.equal((await plan(lfm24.repo, { model: lfm24, caps: full, budget: 4e9 })).chosen, 'diskformer');
   const p = await plan(pi, { model: lfm24, caps: full });
-  assert.equal(p.chosen, 'diskformer-llama');
-  assert.deepEqual(p.candidates.map((c) => c.backend), ['diskformer-llama']);
+  assert.equal(p.chosen, 'diskformer');
+  assert.deepEqual(p.candidates.map((c) => c.backend), ['diskformer', 'diskformer-llama']);
   assert.equal(p.adapter.file, 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf');
-  assert.deepEqual(BACKENDS.filter((b) => b.adapters).map((b) => b.id), ['diskformer-llama']);
+  // Without the hand engine, the llama.cpp path applies it.
+  assert.equal((await plan(pi, { model: lfm24, caps: full, backends: [diskformerLlamaBackend, wllamaBackend] })).chosen, 'diskformer-llama');
+  // A model whose hand engine has no adapter support drops diskformer from the plan.
+  const g = await plan(gemma.repo, { model: gemma, caps: full, budget: 4e9, adapter: pi.adapter });
+  assert.ok(!g.candidates.some((c) => c.backend === 'diskformer'));
+});
+
+test('diskformer: load applies the adapter at run time; setAdapter switches it off and on through load()', async () => {
+  const { load } = await import('../index.js');
+  const fake = await import('./fixtures/fake-engines/lfm2_moe_ssd.js');
+  fake.calls.length = 0;
+  const saved = diskformerBackend.source;
+  diskformerBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  try {
+    const s = await load(MODELS.chat.LFM2_5_24B_PI, { model: lfm24, caps: full });
+    assert.equal(s.backend, 'diskformer');
+    const la = fake.calls.find((c) => c.type === 'loadAdapter');
+    assert.equal(la.url, `https://huggingface.co/harness-hub/LFM2.5-24B-A2B-pi-GGUF/resolve/${MODELS.chat.LFM2_5_24B_PI.adapter.revision}/LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf`);
+    assert.deepEqual(la.opts, { scale: 1 });
+    const chunks = [];
+    for await (const c of s.generate([{ role: 'user', content: 'hi' }])) chunks.push(c);
+    assert.deepEqual(chunks.map((c) => [c.text, c.reasoning]), [['', '\nPlan.'], ['Answer.', '\nPlan.\n']]);
+    let raw;
+    for await (const c of s.generate([{ role: 'user', content: 'hi' }], { thinking: true })) raw = c;
+    assert.equal(raw.text, '\nPlan.\n</think>\n\nAnswer.');
+    assert.equal(raw.reasoning, undefined);
+    await s.setAdapter(false);
+    await s.setAdapter(true);
+    assert.deepEqual(fake.calls.filter((c) => c.type === 'setAdapter').map((c) => c.adapter?.id ?? null), ['pi', null, 'pi']);
+    await s.dispose();
+  } finally { diskformerBackend.source = saved; }
 });
 
 test('diskformer-llama: load downloads the adapter beside the model and passes it to llama.load as lora', async () => {

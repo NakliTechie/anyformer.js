@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.20 — 2026-10-31
+
+### Added
+- Tool calls on every back end: `generate(messages, { tools })` takes OpenAI-style tools. A back end whose chat template
+  renders them (`diskformer-onnx`) gets them as they are; for the others anyformer writes the tool list, assistant
+  `tool_calls` turns and `tool` results into the conversation in the model family's format (`src/tool-calls.js`: LFM2's
+  `<|tool_list_start|>` / `<|tool_call_start|>[name(k=v)]<|tool_call_end|>`; Qwen's hermes `<tools>` /
+  `<tool_call>{json}</tool_call>` for the rest). A chunk whose text holds complete calls carries them as `toolCalls`
+  (OpenAI `tool_calls`, ids `call_<n>`) and its text without them. Qwen3-Coder XML calls (LFM3) parse too, and for LFM2
+  a bare call list ending the reply, since LocalMind's LFM2 engine decodes without special tokens. An assistant turn
+  with only `tool_calls` and no content is valid input.
+- Run-time LoRA on diskformer's LFM2.5 engine (v0.6.19): the `diskformer` back end applies `adapter` with
+  `engine.loadAdapter` / `setAdapter`; `session.setAdapter(false / true)` switches it off and on with no reload.
+  `backend.adapters` may be a function of the model.
+- Browser test `tools`: one get_weather call and its result, then a text answer with the temperature.
+
+### Changed
+- `MODELS.chat.LFM2_5_24B_PI` moves to the `diskformer` back end (the base QAD-Q4_0 GGUF plus the 37 MB adapter at run
+  time; diskformer's gate 9/9 against llama-server --lora). diskformer-llama still applies it where the hand engine
+  cannot run.
+- With thinking off, a diskformer engine that always reasons with the block opened by its prompt (LFM2.5-24B:
+  `alwaysThinks` and `thinkInPrompt`) returns only the answer in `text`, and the reasoning in `reasoning`.
+- diskformer pin 317d2a0 → cefebc7 (v0.6.19: run-time LoRA in `lfm2_moe_ssd.js`).
+
 ## 0.4.19 — 2026-10-31
 
 ### Changed

@@ -3,7 +3,7 @@
 // passed. `test` names the page under test/browser/ that proves the entry; test/models.test.js checks it exists.
 // `diffusion: true` marks a text-diffusion model (the reply denoises in blocks, so generate() chunks arrive a block at a time); `experimental: true` marks an entry its
 // app shows as opt-in until that app's own checks pass; `audioOut: true` marks a model that can also answer in speech
-// (generate({ speech: true })); `adapter` names a LoRA GGUF applied over the model (diskformer-llama only).
+// (generate({ speech: true })); `adapter` names a LoRA GGUF applied over the model (diskformer's LFM2.5 engine, diskformer-llama).
 
 const M = (repo, backend, task, test, extra = {}) => ({ repo, backend, task, test, ...extra });
 
@@ -32,13 +32,15 @@ const NEMOTRON_3_5_BOLT_E4B = M('danyalmalik/NVIDIA-Nemotron-3.5-Bolt-E4B-ONNX-W
 // diskformer checked one hand-written prompt through complete(); generate() renders the GGUF's chat template, which no
 // browser run has checked.
 const DEEPSEEK_V4_1_FLASH = M('ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF', 'diskformer-llama', 'text-generation', 'llama-gate', { budget: 8e9, downloadBytes: 231316411072, experimental: true });
-// LFM2.5-24B-A2B with harness-hub's Pi LoRA (rank 32, alpha 64; asynchronous GRPO inside the Pi coding agent), on
-// diskformer's llama.cpp path, the only back end that applies an adapter. The adapter touches the conv, attention and
-// two dense FFN layers only, so expert paging is unchanged. diskformer v0.6.17's gate: 8/9 replies identical to
-// llama-server --lora (the path's own baseline without the adapter is 7/9). Authors' numbers on 100 data-analysis tasks:
-// 39% fewer tool calls on tasks both solve, pass@1 −4.2 points (noise about ±5); expect base-model behaviour or worse in
-// other agents. Licence lfm1.0 (model and adapter): royalty-free commercial use only below US$10M annual revenue.
-const LFM2_5_24B_PI = M('LiquidAI/LFM2.5-24B-A2B-GGUF', 'diskformer-llama', 'text-generation', 'chat', {
+// LFM2.5-24B-A2B with harness-hub's Pi LoRA (rank 32, alpha 64; asynchronous GRPO inside the Pi coding agent), applied
+// at run time by diskformer's LFM2.5 engine (v0.6.19: one base download, the 37 MB adapter beside it on the GPU,
+// session.setAdapter(false) for the plain model with no reload). The adapter touches the conv, attention and two dense
+// FFN layers only. diskformer's gate: 9/9 replies identical to llama-server --lora (plain 8/9 against llama.cpp, the
+// engine's baseline). diskformer-llama applies it too (8/9) when the hand engine cannot run. Authors' numbers on 100
+// data-analysis tasks: 39% fewer tool calls on tasks both solve, pass@1 −4.2 points (noise about ±5); expect base-model
+// behaviour or worse in other agents. Licence lfm1.0 (model and adapter): royalty-free commercial use only below
+// US$10M annual revenue. The model always reasons first on the hand engine (no thinking-off form).
+const LFM2_5_24B_PI = M('LiquidAI/LFM2.5-24B-A2B-GGUF', 'diskformer', 'text-generation', 'chat', {
   budget: 4e9, downloadBytes: 13578190880 + 37437888, experimental: true, license: 'lfm1.0',
   adapter: { repo: 'harness-hub/LFM2.5-24B-A2B-pi-GGUF', file: 'LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf',
     revision: 'a994cf7f03ab0e572832d5829f42cbe2ef28d472', size: 37437888, scale: 1, trainedFor: 'pi' },
@@ -80,7 +82,7 @@ export const MODELS = {
     LFM3_OMNI_2B,
     /** DeepSeek V4.1 Flash (763B MoE), a tech demo on diskformer's llama.cpp path: 231 GB on disk, very slow. */
     DEEPSEEK_V4_1_FLASH,
-    /** LFM2.5-24B-A2B with harness-hub's Pi coding-agent LoRA (diskformer's llama.cpp path); tuned for the Pi agent; licence lfm1.0. */
+    /** LFM2.5-24B-A2B with harness-hub's Pi coding-agent LoRA, applied at run time by diskformer's engine; tuned for the Pi agent; licence lfm1.0. */
     LFM2_5_24B_PI,
   },
   /** Chat with images in the messages: content [{ type: 'image', image }, { type: 'text', text }]. Gemma 4 takes audio too. */

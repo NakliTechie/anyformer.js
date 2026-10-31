@@ -81,6 +81,8 @@ export const diskformerOnnxBackend = {
       // chunk, and `sampleRate`; maxNewTokens then counts text tokens and speech frames (80 ms each) together. Speech is
       // sampled (generation_config.json: temperature 0.4, repetition penalty 1.2 over 64 frames); audioTemperature,
       // audioRepetitionPenalty, audioRepetitionWindow and seed override it.
+      // The chat template renders the tool list itself; anyformer only parses the calls.
+      templateTools: true,
       async *generate(messages, { maxNewTokens = 512, signal, thinking = false, tools, repetitionPenalty, speech = false, seed,
         audioTemperature, audioRepetitionPenalty, audioRepetitionWindow } = {}) {
         const queue = [];

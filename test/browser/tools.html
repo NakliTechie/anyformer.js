@@ -1,0 +1,43 @@
+<!doctype html><meta charset="utf-8"><title>tools</title>
+<!-- A tool call through anyformer: one get_weather tool, "What is the weather in Paris right now?"; PASS when the reply
+     carries toolCalls naming get_weather with city Paris, then a second turn with the tool's result answers in text with
+     the temperature. ?entry=<family>.<KEY> or ?repo=, ?budget=, ?local=1 and ?tokens=N as on the chat page. -->
+<script type="module">
+import * as af from '../../index.js';
+import { run, log } from './harness.js';
+const q = new URLSearchParams(location.search);
+const local = (name) => `${location.origin}/models/${name.split('/').pop()}`;
+if (q.get('local')) {
+  af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
+  af.diskformerBackend.adapterUrl = (a) => local(a.file);
+  af.diskformerLlamaBackend.url = (model, f) => local(f.name);
+}
+const localFetch = (u, o) => fetch(typeof u === 'string' && u.includes('/resolve/') ? local(u.split('?')[0]) : u, o);
+const [family, key] = (q.get('entry') || '').split('.');
+const tools = [{ type: 'function', function: { name: 'get_weather', description: 'Current weather for a city',
+  parameters: { type: 'object', properties: { city: { type: 'string', description: 'City name' } }, required: ['city'] } } }];
+run('tools', async () => {
+  const s = await af.load(key ? af.MODELS[family][key] : q.get('repo') || 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF', {
+    ...((q.get('budget') || !key) && { budget: Number(q.get('budget') || 2.5) * 1e9 }),
+    ...(q.get('local') && { fetch: localFetch }),
+  });
+  log(`loaded by ${s.backend}`);
+  const maxNewTokens = Number(q.get('tokens') || 256);
+  const msgs = [{ role: 'user', content: 'What is the weather in Paris right now?' }];
+  let first;
+  for await (const c of s.generate(msgs, { tools, maxNewTokens })) first = c;
+  log(`turn 1: ${JSON.stringify(first.toolCalls)} ${first.text}`);
+  const call = first.toolCalls?.[0];
+  const args = call && JSON.parse(call.function.arguments);
+  let second = null;
+  if (call) {
+    msgs.push({ role: 'assistant', content: first.text || null, tool_calls: first.toolCalls },
+      { role: 'tool', tool_call_id: call.id, content: '{"city": "Paris", "temperature_c": 18, "sky": "clear"}' });
+    for await (const c of s.generate(msgs, { tools, maxNewTokens })) second = c;
+    log(`turn 2: ${second.text}`);
+  }
+  await s.dispose();
+  return { ok: call?.function.name === 'get_weather' && /paris/i.test(args?.city || '') && /18/.test(second?.text || '') && !second?.toolCalls,
+    backend: s.backend, repo: s.plan.model.repo, toolCalls: first.toolCalls ?? null, firstText: first.text, secondText: second?.text ?? null };
+});
+</script>

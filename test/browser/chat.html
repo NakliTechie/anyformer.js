@@ -12,6 +12,7 @@ const local = (name) => `${location.origin}/models/${name.split('/').pop()}`;
 if (q.get('local')) {
   af.diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
   af.diskformerLlamaBackend.url = (model, f) => local(f.name);
+  af.diskformerBackend.adapterUrl = (a) => local(a.file);
 }
 const localFetch = (u, o) => fetch(typeof u === 'string' && u.includes('/resolve/') ? local(u.split('?')[0]) : u, o);
 const [family, key] = (q.get('entry') || '').split('.');

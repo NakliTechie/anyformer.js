@@ -51,6 +51,8 @@ export const DISKFORMER_MODELS = [
   {
     repo: 'LiquidAI/LFM2.5-24B-A2B-GGUF', file: 'LFM2.5-24B-A2B-QAD-Q4_0.gguf', size: 13578190880,
     engine: 'lfm2_moe_ssd.js', Engine: 'Lfm2MoeSsd', minBudget: 4e9,
+    // LoRA at run time (v0.6.19+: engine.loadAdapter / setAdapter; adapters on the routed experts are refused).
+    adapters: true,
     speeds: [],
   },
   // Two parts, ingested as one file by the engine's splitFetch (engines/ling_moe_ssd.js LING_FLASH, rev 29edce5).
@@ -91,6 +93,10 @@ export const diskformerBackend = {
   source: SOURCES.diskformer,
   // Where the engine downloads its GGUF from; null is Hugging Face. A test points it at a local server.
   url: null,
+  // Where an adapter GGUF downloads from.
+  adapterUrl: (a) => `https://huggingface.co/${a.repo}/resolve/${a.revision || 'main'}/${a.file.split('/').map(encodeURIComponent).join('/')}`,
+  // The engines that apply a LoRA at run time.
+  adapters: (model) => !!match(model)?.adapters,
 
   canRun(model, caps, { budget, task }) {
     if (!model.formats.includes('gguf')) return { ok: false, code: 'format', reason: 'no GGUF in the repo' };
@@ -111,7 +117,9 @@ export const diskformerBackend = {
   //   its pool from gpuBudgetBytes when given one, so it gets one or the other).
   // localFile: the GGUF as a File the user picked; the engine ingests it instead of downloading, and refuses a file
   //   whose size differs from the one it is pinned to.
-  async load(model, { budget, maxCtx = 1024, poolBytes, localFile, onProgress, signal }) {
+  // adapter: { repo, file, revision, scale } loads onto the GPU beside the model and is on for every reply;
+  //   session.setAdapter(false / true) switches it off and on again with no reload.
+  async load(model, { budget, maxCtx = 1024, poolBytes, localFile, adapter = null, onProgress, signal }) {
     const m = match(model);
     const mod = await import(`${diskformerBackend.source}/${m.engine}`);
     let engine;
@@ -124,6 +132,14 @@ export const diskformerBackend = {
         onProgress: onProgress && ((e) => onProgress({ backend: 'diskformer', ...e })),
       });
     } catch (e) { throw budgetError(e) || e; }
+    let lora = null;
+    if (adapter) {
+      try {
+        onProgress?.({ backend: 'diskformer', status: 'adapter', file: adapter.file });
+        lora = await engine.loadAdapter(diskformerBackend.adapterUrl(adapter), { scale: adapter.scale ?? 1 });
+        await engine.setAdapter(lora);
+      } catch (e) { await engine.dispose?.(); throw e; }
+    }
     // Where the model's reasoning starts and ends, as token ids, so a caller can split it out without parsing text.
     const open = engine.thinkOpenTokenId ?? null;
     return {
@@ -136,14 +152,23 @@ export const diskformerBackend = {
       // thinking: false (the default, as on every back end here) answers directly; true lets a model that reasons
       // (Gemma 4, Qwen3.6, Ling) think first. Image blocks ({ type: 'image', rgb, width, height }) pass through to
       // an engine that reads them.
+      // A model that always reasons with the block opened by its prompt (LFM2.5-24B: engine.alwaysThinks and
+      // thinkInPrompt) cannot answer directly, so with thinking off its reasoning moves to `reasoning` and `text` holds
+      // only what follows </think> (empty until then).
       async *generate(messages, { maxNewTokens = 512, signal, thinking = false } = {}) {
-        for await (const r of engine.generate(messages, { maxNewTokens, signal, enableThinking: thinking === true }))
-          yield { text: r.text, token: r.token, tokens: r.tokens };
+        const split = thinking !== true && engine.alwaysThinks === true && engine.thinkInPrompt === true;
+        for await (const r of engine.generate(messages, { maxNewTokens, signal, enableThinking: thinking === true })) {
+          if (!split) { yield { text: r.text, token: r.token, tokens: r.tokens }; continue; }
+          const at = r.text.indexOf('</think>');
+          yield at < 0 ? { text: '', reasoning: r.text, token: r.token, tokens: r.tokens }
+            : { text: r.text.slice(at + 8).replace(/^\s+/, ''), reasoning: r.text.slice(0, at), token: r.token, tokens: r.tokens };
+        }
       },
       // Checkpoints a system prompt after load, so the first question does not wait for it (Qwen3.6, MiniCPM-V).
       ...(typeof engine.prime === 'function' && { prime: (system) => engine.prime(system) }),
       // Loads the vision tower, for an engine that reads images (MiniCPM-V).
       ...(typeof engine.ensureVision === 'function' && { ensureVision: (o) => engine.ensureVision(o) }),
+      ...(lora && { setAdapter: (on) => engine.setAdapter(on ? lora : null) }),
       dispose: () => engine.dispose(),
     };
   },

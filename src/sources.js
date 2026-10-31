@@ -9,6 +9,7 @@ export const PINS = {
   // v0.3.1: seeded block-KV graphs (Nemotron-Labs-Diffusion-3B), chatFormat, split external data; download progress
   // (progress_callback) and the graph files cached in Cache Storage 'kohra-models'.
   kohra: 'bf95d44c3e3cfc001201baa03fa121c2bf9c7d73',
+  // v0.6.19 (cefebc7): run-time LoRA in lfm2_moe_ssd.js (engine.loadAdapter / setAdapter, no reload to switch).
   // v0.6.18 (317d2a0): with thinking off, the llama.cpp chat closes a template's always-open <think> (LFM2.5-24B) and
   // bans the <think> token for the reply.
   // v0.6.17 (314362e): LoRA adapters on the llama.cpp path (llama.load({ lora, loraScale })), and lfm2_moe_ssd.js runs
@@ -30,7 +31,7 @@ export const PINS = {
   // Gemma 4 E2B/E4B and Ternary Bonsai 2) under engines/, and the llama.cpp path under ggml/, which loads split GGUFs
   // and drafters, and reads past 2 GiB (Nemotron 3.5 Bolt E4B needs v0.6.8 or later). The hand engines' ingest
   // streams the GGUF header with progress and resumes a dropped range.
-  diskformer: '317d2a002d95278e504ed84fab2d0f71dabaa884',
+  diskformer: 'cefebc7c18bf106f82378925bd5650cae4320193',
 };
 
 const gh = (repo, sha, path) => `https://cdn.jsdelivr.net/gh/NakliTechie/${repo}@${sha}/${path}`;
