@@ -24,6 +24,16 @@
   `alwaysThinks` and `thinkInPrompt`) returns only the answer in `text`, and the reasoning in `reasoning`.
 - diskformer pin 317d2a0 → cefebc7 (v0.6.19: run-time LoRA in `lfm2_moe_ssd.js`).
 
+### Verified (after the npm publish, on the published code)
+- `tools` on LFM2.5 230M (`localmind`, local file): `get_weather` {"city":"Paris"} parsed from the bare call list;
+  after the tool result, an answer with 18°C and clear sky.
+- `tools` on `LFM2_5_24B_PI` (`diskformer`, run-time adapter, base GGUF and adapter from local files, 13:31 IST): the
+  first turn's text is empty (reasoning in `reasoning`) with `get_weather` {"city":"Paris"} as `toolCalls`; then
+  "The current weather in Paris is **clear skies** with a temperature of **18°C**."
+- `chat?entry=chat.LFM2_5_24B_PI&turns=4` on the same engine (by 13:41 IST): PASS, 4/4 turns on topic with no
+  reasoning in `text`; load 50 s from OPFS. The page's tok/s (about 2.5) counts only answer tokens after the hidden
+  reasoning, so it is not a decode speed.
+
 ## 0.4.19 — 2026-10-31
 
 ### Changed
