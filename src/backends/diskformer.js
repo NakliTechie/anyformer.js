@@ -81,6 +81,41 @@ function budgetError(e) {
   return m && new AnyformerError('BUDGET_TOO_SMALL', `diskformer: ${e.message}`, { cause: e, need: Math.ceil((+m[1] + +m[2]) * 1e9) });
 }
 
+// Adapter GGUFs, kept in Cache Storage under their download URL (…/<repo>/resolve/<revision>/<file>), so a later load
+// reads them from disk. src/store.js lists and removes them with the adapter's repo.
+export const ADAPTER_CACHE = 'anyformer-adapters-v1';
+
+// The adapter's bytes as a Blob: from the cache, or downloaded with progress events and then cached. A cached copy
+// whose size differs from adapter.size is downloaded again.
+async function adapterBlob(url, adapter, onProgress, signal) {
+  const cache = typeof caches !== 'undefined' ? await caches.open(ADAPTER_CACHE).catch(() => null) : null;
+  const say = (loaded, total, cached = false) => onProgress?.({ backend: 'diskformer', status: 'adapter', file: adapter.file, loaded, total, ...(cached && { cached }) });
+  const hit = await cache?.match(url);
+  if (hit) {
+    const b = await hit.blob();
+    if (!adapter.size || b.size === adapter.size) { say(b.size, b.size, true); return b; }
+    await cache.delete(url);
+  }
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new AnyformerError('LOAD_FAILED', `diskformer: adapter ${adapter.file}: HTTP ${res.status}`);
+  const total = Number(res.headers.get('content-length')) || adapter.size || 0;
+  const parts = [], reader = res.body.getReader();
+  let loaded = 0, at = 0;
+  say(0, total);
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parts.push(value);
+    loaded += value.length;
+    if (Date.now() - at > 250) { at = Date.now(); say(loaded, total); }
+  }
+  const blob = new Blob(parts);
+  if (adapter.size && blob.size !== adapter.size) throw new AnyformerError('LOAD_FAILED', `diskformer: adapter ${adapter.file}: ${blob.size} bytes, expected ${adapter.size}`);
+  say(blob.size, total || blob.size);
+  await cache?.put(url, new Response(blob, { headers: { 'content-length': String(blob.size) } })).catch(() => {});
+  return blob;
+}
+
 const has = (model, file, size) => model.files.gguf.some((f) => f.name === file && f.size === size);
 const match = (model) => DISKFORMER_MODELS.find((m) => m.repo === model.repo &&
   (m.parts ? m.parts.every((p) => has(model, p.file, p.size)) : has(model, m.file, m.size)));
@@ -121,7 +156,8 @@ export const diskformerBackend = {
   //   its pool from gpuBudgetBytes when given one, so it gets one or the other).
   // localFile: the GGUF as a File the user picked; the engine ingests it instead of downloading, and refuses a file
   //   whose size differs from the one it is pinned to.
-  // adapter: { repo, file, revision, scale } loads onto the GPU beside the model and is on for every reply;
+  // adapter: { repo, file, revision, size, scale } loads onto the GPU beside the model and is on for every reply; its
+  //   GGUF downloads once (progress events with status 'adapter') and stays in Cache Storage (ADAPTER_CACHE);
   //   session.setAdapter(false / true) switches it off and on again with no reload.
   async load(model, { budget, maxCtx = 1024, poolBytes, localFile, adapter = null, onProgress, signal }) {
     const m = match(model);
@@ -139,8 +175,8 @@ export const diskformerBackend = {
     let lora = null;
     if (adapter) {
       try {
-        onProgress?.({ backend: 'diskformer', status: 'adapter', file: adapter.file });
-        lora = await engine.loadAdapter(diskformerBackend.adapterUrl(adapter), { scale: adapter.scale ?? 1 });
+        const bytes = await adapterBlob(diskformerBackend.adapterUrl(adapter), adapter, onProgress, signal);
+        lora = await engine.loadAdapter(bytes, { scale: adapter.scale ?? 1 });
         await engine.setAdapter(lora);
       } catch (e) { await engine.dispose?.(); throw e; }
     }

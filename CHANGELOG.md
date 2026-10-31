@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.22 — 2026-10-31
+
+### Changed
+- The `diskformer` back end downloads an `adapter` GGUF itself and keeps it in Cache Storage (`anyformer-adapters-v1`,
+  keyed by its URL, so by repo, revision and file). A later load reads it from disk; a cached copy whose size
+  differs from `adapter.size` downloads again. The download reports progress (`status: 'adapter'`, `loaded`,
+  `total`; `cached: true` on a cache hit), and the engine gets the bytes as a Blob. Before, every load fetched the
+  37 MB Pi adapter again with no progress (NakliOS: about 3 minutes per load at 200 KB/s).
+- `stored()` and `remove(repo)` cover the adapter cache, listed under the adapter's repo.
+
+### Verified
+- `npm test` 108/108: the first load downloads the adapter once with progress from 0 to 37,437,888 bytes and caches
+  it; a second load downloads nothing and reports `cached: true`.
+
+### Not yet verified
+- No browser run of the cache in Chrome; NakliOS's live check covers it.
+
 ## 0.4.21 — 2026-10-31
 
 ### Changed

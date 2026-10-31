@@ -185,14 +185,25 @@ test('diskformer: load applies the adapter at run time; setAdapter switches it o
   const { load } = await import('../index.js');
   const fake = await import('./fixtures/fake-engines/lfm2_moe_ssd.js');
   fake.calls.length = 0;
-  const saved = diskformerBackend.source;
+  const saved = { source: diskformerBackend.source, fetch: globalThis.fetch, caches: globalThis.caches };
   diskformerBackend.source = new URL('./fixtures/fake-engines', import.meta.url).href;
+  // The adapter download: a fake 37,437,888-byte body, and a Cache Storage stand-in keyed by URL.
+  const { size } = MODELS.chat.LFM2_5_24B_PI.adapter;
+  const fetched = [], stored = new Map();
+  globalThis.fetch = async (url) => { fetched.push(url); return new Response(new Uint8Array(size), { headers: { 'content-length': String(size) } }); };
+  globalThis.caches = { open: async () => ({
+    match: async (u) => stored.get(u)?.clone(), put: async (u, r) => { stored.set(u, r); }, delete: async (u) => stored.delete(u) }) };
   try {
-    const s = await load(MODELS.chat.LFM2_5_24B_PI, { model: lfm24, caps: full });
+    const progress = [];
+    const s = await load(MODELS.chat.LFM2_5_24B_PI, { model: lfm24, caps: full, onProgress: (e) => { if (e.status === 'adapter') progress.push(e); } });
     assert.equal(s.backend, 'diskformer');
+    const url = `https://huggingface.co/harness-hub/LFM2.5-24B-A2B-pi-GGUF/resolve/${MODELS.chat.LFM2_5_24B_PI.adapter.revision}/LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf`;
+    assert.deepEqual(fetched, [url]);
     const la = fake.calls.find((c) => c.type === 'loadAdapter');
-    assert.equal(la.url, `https://huggingface.co/harness-hub/LFM2.5-24B-A2B-pi-GGUF/resolve/${MODELS.chat.LFM2_5_24B_PI.adapter.revision}/LFM2.5-24B-A2B-harbor-pi-lora-F16.gguf`);
+    assert.ok(la.url instanceof Blob && la.url.size === size, 'the engine gets the adapter bytes, not a URL');
     assert.deepEqual(la.opts, { scale: 1 });
+    assert.deepEqual([progress[0].loaded, progress.at(-1).loaded, progress.at(-1).total], [0, size, size]);
+    assert.ok(stored.has(url), 'the adapter is kept in Cache Storage');
     const chunks = [];
     for await (const c of s.generate([{ role: 'user', content: 'hi' }])) chunks.push(c);
     assert.deepEqual(chunks.map((c) => [c.text, c.reasoning]), [['', '\nPlan.'], ['Answer.', '\nPlan.\n']]);
@@ -204,7 +215,13 @@ test('diskformer: load applies the adapter at run time; setAdapter switches it o
     await s.setAdapter(true);
     assert.deepEqual(fake.calls.filter((c) => c.type === 'setAdapter').map((c) => c.adapter?.id ?? null), ['pi', null, 'pi']);
     await s.dispose();
-  } finally { diskformerBackend.source = saved; }
+    // A second load reads the cached copy: no download.
+    const cachedProgress = [];
+    const s2 = await load(MODELS.chat.LFM2_5_24B_PI, { model: lfm24, caps: full, onProgress: (e) => { if (e.status === 'adapter') cachedProgress.push(e); } });
+    assert.equal(fetched.length, 1);
+    assert.equal(cachedProgress.at(-1).cached, true);
+    await s2.dispose();
+  } finally { diskformerBackend.source = saved.source; globalThis.fetch = saved.fetch; globalThis.caches = saved.caches; }
 });
 
 test('diskformer-llama: load downloads the adapter beside the model and passes it to llama.load as lora', async () => {
