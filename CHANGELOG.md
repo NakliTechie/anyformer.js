@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.19 — 2026-10-31
+
+### Changed
+- diskformer pin 314362e → 317d2a0 (v0.6.18): with thinking off, diskformer's llama.cpp chat closes a chat template's
+  always-open `<think>` block and bans the `<think>` token for the reply, so LFM2.5-24B-A2B (base and
+  `LFM2_5_24B_PI`) answers directly. This resolves 0.4.18's known limitation. diskformer's gates (Chrome, 4 GB):
+  thinking off 9/9 plain replies with and without the Pi adapter; thinking on unchanged (8/9 against llama.cpp).
+
+### Verified
+- `LFM2_5_24B_PI` through anyformer, 4 turns, thinking off (browser `chat?entry=chat.LFM2_5_24B_PI&local=1&turns=4&tokens=96`,
+  Chrome 156, this Mac, 12:12 IST, base GGUF and adapter from local files, diskformer 317d2a0): PASS. Loaded in 101.1 s;
+  every reply on topic with no `<think>` text (CPU, RAM, which is faster with latency figures, a one-sentence
+  summary); 2.6–3.1 tok/s.
+- LFM2.5 230M, 4 turns, on 0.4.18's pin 314362e (browser `chat?local=1&turns=4`, `localmind`, 12:13 IST): PASS, load
+  8.7 s, 4/4 turns on topic.
+
 ## 0.4.18 — 2026-10-31
 
 ### Added
