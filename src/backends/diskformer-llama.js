@@ -112,6 +112,8 @@ function textOnly(messages) {
 export const diskformerLlamaBackend = {
   id: 'diskformer-llama',
   tasks: ['text-generation', 'image-text-to-text'],
+  // Applies a LoRA GGUF over the model (llama.load({ lora, loraScale }), diskformer v0.6.17+), as llama-server --lora.
+  adapters: true,
   source: SOURCES.diskformerLlama,
   // Where a GGUF downloads from; a test points it at a local server.
   url: (model, file) => `${model.endpoint || 'https://huggingface.co'}/${model.repo}/resolve/${model.revision || 'main'}/${file.name.split('/').map(encodeURIComponent).join('/')}`,
@@ -131,7 +133,8 @@ export const diskformerLlamaBackend = {
   },
 
   // maxCtx sizes the KV cache; 1024 is the context diskformer's gates run at.
-  async load(model, { budget, file = null, maxCtx = 1024, onProgress, signal }) {
+  // adapter: { repo, file, revision, size, scale } downloads into OPFS beside the model and applies at scale (default 1).
+  async load(model, { budget, file = null, adapter = null, maxCtx = 1024, onProgress, signal }) {
     const f = pickGguf(model, file);
     const { Llama } = await import(diskformerLlamaBackend.source);
     const llama = new Llama();
@@ -140,23 +143,27 @@ export const diskformerLlamaBackend = {
     signal?.addEventListener('abort', stop, { once: true });
     let info;
     try {
-      // Each part and side file downloads under its own name; progress counts bytes over all of them.
-      const files = [...f.parts, ...f.extra];
+      // Each part, side file and adapter downloads under its own name; progress counts bytes over all of them.
+      const lora = adapter && { name: adapter.file.split('/').pop(), size: adapter.size, repo: adapter.repo,
+        url: diskformerLlamaBackend.url({ repo: adapter.repo, revision: adapter.revision, endpoint: model.endpoint }, { name: adapter.file }) };
+      const files = [...f.parts.map((p) => ({ name: opfsName(p), size: p.size, repo: model.repo, url: diskformerLlamaBackend.url(model, p) })),
+        ...f.extra.map((p) => ({ name: opfsName(p), size: p.size, repo: model.repo, url: diskformerLlamaBackend.url(model, p) })),
+        ...(lora ? [lora] : [])];
+      const total = files.reduce((n, x) => n + x.size, 0);
       let before = 0;
-      for (const part of files) {
-        const name = opfsName(part);
+      for (const { name, size, url } of files) {
         const have = (await llama.list()).find((m) => m.name === name && !m.partial);
-        if (!have || have.size !== part.size) {
-          say({ status: 'download', loaded: before, total: f.size });
-          await llama.download({ url: diskformerLlamaBackend.url(model, part), name, size: part.size },
-            (p) => say({ status: 'download', loaded: before + p.copied, total: f.size }));
+        if (!have || have.size !== size) {
+          say({ status: 'download', loaded: before, total });
+          await llama.download({ url, name, size }, (p) => say({ status: 'download', loaded: before + p.copied, total }));
           signal?.throwIfAborted();
         }
-        before += part.size;
+        before += size;
       }
-      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(files.map((p) => [opfsName(p), model.repo])) });
+      await writeIndex({ ...(await readIndex()), ...Object.fromEntries(files.map((p) => [p.name, p.repo])) });
       say({ status: 'load' });
-      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx, extra: f.extra.map(opfsName) }, (p) => say({ status: 'plan', plan: p }));
+      info = await llama.load({ name: opfsName(f), budget, ctx: maxCtx, extra: f.extra.map(opfsName),
+        ...(lora && { lora: lora.name, loraScale: adapter.scale ?? 1 }) }, (p) => say({ status: 'plan', plan: p }));
       signal?.throwIfAborted();
     } catch (e) {
       llama.terminate();

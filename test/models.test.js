@@ -35,6 +35,7 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
     'naklitechie/Nemotron-Labs-Diffusion-3B-ONNX': 'naklitechie_Nemotron-Labs-Diffusion-3B-ONNX',
     'ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF': 'ISTA-DASLab_DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF',
     'LiquidAI/LFM3-1.7B-ONNX': 'LiquidAI_LFM3-1.7B-ONNX',
+    'LiquidAI/LFM2.5-24B-A2B-GGUF': 'LiquidAI_LFM2.5-24B-A2B-GGUF',
     'LiquidAI/LFM3-Omni-2B-ONNX': 'LiquidAI_LFM3-Omni-2B-ONNX',
     'Xenova/all-MiniLM-L6-v2': 'Xenova_all-MiniLM-L6-v2',
     'Xenova/detr-resnet-50': 'Xenova_detr-resnet-50',
@@ -48,11 +49,11 @@ test('an entry resolves to its own back end from its Hub fixture, with its task 
   }
 });
 
-test('diffusion entries run on kohra, or on diskformer for Clover; three entries are experimental', () => {
+test('diffusion entries run on kohra, or on diskformer for Clover; four entries are experimental', () => {
   for (const m of entries) assert.equal(!!m.diffusion, m.backend === 'kohra' || m === MODELS.chat.CLOVER_35B_A3B, m.repo);
   assert.equal(MODELS.chat.CLOVER_35B_A3B.backend, 'diskformer');
-  for (const k of ['NEMOTRON_DIFFUSION_3B', 'DEEPSEEK_V4_1_FLASH', 'CLOVER_35B_A3B']) assert.equal(MODELS.chat[k].experimental, true, k);
-  assert.equal(entries.filter((m) => m.experimental).length, 3);
+  for (const k of ['NEMOTRON_DIFFUSION_3B', 'DEEPSEEK_V4_1_FLASH', 'CLOVER_35B_A3B', 'LFM2_5_24B_PI']) assert.equal(MODELS.chat[k].experimental, true, k);
+  assert.equal(entries.filter((m) => m.experimental).length, 4);
 });
 
 test('options passed with an entry win over the entry', async () => {

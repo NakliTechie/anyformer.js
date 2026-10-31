@@ -2,8 +2,18 @@
 
 ## 0.4.18 — 2026-10-31
 
+### Added
+- LoRA adapters: `load(repo, { adapter: { repo, file, revision, size, scale } })` (or an entry carrying `adapter`)
+  downloads the adapter GGUF into OPFS beside the model and applies it at `scale` on `diskformer-llama`, the only back
+  end with `adapters: true`; the others drop out of the plan. Needs diskformer v0.6.17.
+- `MODELS.chat.LFM2_5_24B_PI`: LFM2.5-24B-A2B (QAD-Q4_0) with harness-hub's Pi coding-agent LoRA
+  (`harness-hub/LFM2.5-24B-A2B-pi-GGUF` at a994cf7, 37.4 MB), 4 GB budget, `experimental`, `license: 'lfm1.0'`.
+  diskformer's gate (v0.6.17): 8/9 replies identical to llama-server --lora (7/9 without the adapter, the path's own
+  baseline). The adapter was trained inside the Pi agent; elsewhere expect base-model behaviour or worse. Hub fixture
+  at 0912d33.
+
 ### Changed
-- diskformer pin f17009c → 467052f (v0.6.16): Chrome 156 rejects mixed f16/f32 subgroup-matrix kernels on Apple GPUs,
+- diskformer pin f17009c → 314362e (v0.6.17, which includes v0.6.16). v0.6.16: Chrome 156 rejects mixed f16/f32 subgroup-matrix kernels on Apple GPUs,
   so Ternary Bonsai 2 27B, Gemma 4 E2B, LFM2.5 and the IQ-quant dense path failed to load ("Mixed precision subgroup
   matrix multiply is not supported by the device"). diskformer's new `engines/subgroup-matrix-guard.js` hides the
   feature when a tiny mixed kernel fails to compile, and those engines take their non-matrix prefill (slower prefill).
