@@ -23,10 +23,10 @@ export async function run(name, fn) {
   document.title = `${window.result.ok ? 'PASS' : 'FAIL'} ${name}`;
 }
 // One chat reply through anyformer, timed: the last chunk's text, token count, tok/s after the first chunk.
-export async function reply(session, messages, maxNewTokens) {
+export async function reply(session, messages, maxNewTokens, options = {}) {
   const t0 = performance.now();
   let text = '', tokens = 0, tFirst = 0, firstTokens = 0;
-  for await (const c of session.generate(messages, { maxNewTokens })) {
+  for await (const c of session.generate(messages, { maxNewTokens, ...options })) {
     if (!tFirst) { tFirst = performance.now(); firstTokens = c.tokens; }
     text = c.text; tokens = c.tokens;
     if (c.tokPerSec) return { text, tokens, tokPerSec: +c.tokPerSec.toFixed(2), seconds: +((performance.now() - t0) / 1e3).toFixed(1) };

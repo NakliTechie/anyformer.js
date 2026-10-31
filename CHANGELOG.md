@@ -9,8 +9,13 @@
   9/9, 6/9. Adapters on routed experts are refused with an error. MiniCPM-V, Clover, Flint and Ling take no adapter,
   so an `adapter` drops `diskformer` from their plans.
 
-### Not yet verified
-- No browser run of an adapter on Gemma 4 or Qwen3.6 through anyformer: no adapter GGUF for either is in the catalog.
+### Verified (after the tag, on the pinned code)
+- Browser test `diskformer-chat --query "local=1&adapter=gemma4-26b-random-lora.gguf"` (new adapter mode; Gemma 4 26B
+  at a 2.5 GB budget, diskformer's seeded random rank-32 test adapter on 205 matrices, thinking on, 15:28 to 15:35
+  IST): plain 9/9 against llama-server, adapter on 8/9 against `llama-server --lora` on the same file, plain again 9/9
+  with the same text as the first phase; the adapter changed 3 of 9 replies. The one miss (word-problem) is the one
+  diskformer's own gate reports: the reply where the adapter first changes the text keeps the plain branch.
+- Not run: Qwen3.6 35B with its test adapter (36.9 GB GGUF).
 
 ## 0.4.20 — 2026-10-31
 

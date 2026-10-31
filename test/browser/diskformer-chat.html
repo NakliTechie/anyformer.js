@@ -1,37 +1,73 @@
 <!doctype html><meta charset="utf-8"><title>diskformer-chat</title>
 <!-- diskformer's chat gate, through anyformer: replay llama.cpp b9830's replies (test/fixtures/diskformer-gemma-chat-refs.json,
-     copied from diskformer.js examples/chat/refs/gemma.json) and require each reply to match character for character. -->
+     copied from diskformer.js examples/chat/refs/gemma.json) and require each reply to match character for character.
+     ?adapter=<file>: the adapter gate instead (needs ?local=1, the adapter in a --models folder). Three phases on one
+     load, thinking on: plain against diskformer's examples/chat/refs/gemma-lora-test-base.json, the adapter on against
+     gemma-lora-test-lora.json (llama-server --lora on the same file), then plain again, which must repeat phase 1's
+     text. The refs load from the pinned diskformer commit. -->
 <script type="module">
-import { load, diskformerBackend } from '../../index.js';
+import { load, diskformerBackend, PINS } from '../../index.js';
 import { run, log, reply } from './harness.js';
 const q = new URLSearchParams(location.search);
 const budget = Number(q.get('budget') || 2.5) * 1e9;
-// ?local=1: the engine reads the GGUF from run.mjs's --models folder instead of Hugging Face.
-if (q.get('local')) diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
+const adapterFile = q.get('adapter');
+// ?local=1: the engine reads the GGUF (and the adapter) from run.mjs's --models folder instead of Hugging Face.
+if (q.get('local')) {
+  diskformerBackend.url = (model, m) => `${location.origin}/models/${m.file}`;
+  diskformerBackend.adapterUrl = (a) => `${location.origin}/models/${a.file}`;
+}
+const refsAt = (name) => `https://cdn.jsdelivr.net/gh/NakliTechie/diskformer.js@${q.get('diskformer') || PINS.diskformer}/examples/chat/refs/${name}`;
+// The reply text without Gemma 4's channel markers, which llama-server keeps and the engine drops.
+const bare = (t) => t.replace(/^<\|channel>thought\n?/, '').replace(/^<channel\|>/, '');
+
+async function phase(s, ref, options) {
+  const rows = [];
+  for (const c of ref.conversations) {
+    log(`${options.label}: ${c.name} (${rows.length + 1} of ${ref.conversations.length})`);
+    const r = await reply(s, c.messages, c.tokens || 64, options.thinking ? { thinking: true } : {});
+    const ours = options.thinking ? bare((r.reasoning ?? '') + r.text) : r.text;
+    if (c.content === undefined) { rows.push({ name: c.name, text: ours, tokens: r.tokens, tokPerSec: r.tokPerSec }); continue; }
+    const theirs = bare(c.content);
+    rows.push({ name: c.name, identical: ours === theirs, tokens: r.tokens, tokPerSec: r.tokPerSec, text: ours, ...(ours === theirs ? {} : { theirs }) });
+  }
+  const compared = rows.filter((r) => 'identical' in r);
+  return { identical: compared.filter((r) => r.identical).length, compared: compared.length, rows };
+}
+
 run('diskformer-chat', async () => {
-  const ref = await (await fetch('../fixtures/diskformer-gemma-chat-refs.json')).json();
   let lastAt = 0;
   const s = await load('google/gemma-4-26B-A4B-it-qat-q4_0-gguf', {
     budget, backends: [diskformerBackend],
+    ...(adapterFile && { adapter: { repo: 'local', file: adapterFile, scale: 1 } }),
     onProgress: (e) => {
       if (Date.now() - lastAt < 5000 && e.status !== 'ready') return;
       lastAt = Date.now();
       log(`${e.status}${e.kind ? ' ' + e.kind : ''}${e.total ? ` ${e.loaded} of ${e.total}` : ''}`);
     },
   });
-  const PREFIX = '<|channel>thought\n<channel|>';
-  const rows = [];
-  for (const c of ref.conversations) {
-    log(`gate: ${c.name} (${rows.length + 1} of ${ref.conversations.length})`);
-    const r = await reply(s, c.messages, c.tokens || 64);
-    if (c.content === undefined) { rows.push({ name: c.name, text: r.text, tokens: r.tokens, tokPerSec: r.tokPerSec }); continue; }
-    const theirs = c.content.startsWith(PREFIX) ? c.content.slice(PREFIX.length) : c.content;
-    rows.push({ name: c.name, identical: r.text === theirs, tokens: r.tokens, tokPerSec: r.tokPerSec, ...(r.text === theirs ? {} : { ours: r.text, theirs }) });
+  if (!adapterFile) {
+    const ref = await (await fetch('../fixtures/diskformer-gemma-chat-refs.json')).json();
+    const p = await phase(s, ref, { label: 'gate' });
+    const speeds = p.rows.map((r) => r.tokPerSec).filter(Boolean).sort((a, b) => a - b);
+    await s.dispose();
+    return { ok: p.identical === p.compared && p.rows.every((r) => r.tokens > 0), identical: p.identical, compared: p.compared,
+      of: p.rows.length, budget, medianTokPerSec: speeds[speeds.length >> 1], rows: p.rows };
   }
-  const compared = rows.filter((r) => 'identical' in r), identical = compared.filter((r) => r.identical).length;
-  const speeds = rows.map((r) => r.tokPerSec).filter(Boolean).sort((a, b) => a - b);
+  const [base, lora] = await Promise.all(['gemma-lora-test-base.json', 'gemma-lora-test-lora.json'].map(async (n) => (await fetch(refsAt(n))).json()));
+  await s.setAdapter(false);
+  const plain = await phase(s, base, { label: 'plain', thinking: true });
+  await s.setAdapter(true);
+  const on = await phase(s, lora, { label: 'adapter', thinking: true });
+  await s.setAdapter(false);
+  const again = await phase(s, base, { label: 'plain again', thinking: true });
   await s.dispose();
-  return { ok: identical === compared.length && rows.every((r) => r.tokens > 0), identical, compared: compared.length, of: rows.length,
-    budget, medianTokPerSec: speeds[speeds.length >> 1], rows };
+  const repeats = again.rows.every((r, i) => r.text === plain.rows[i].text);
+  const changed = on.rows.filter((r, i) => r.text !== plain.rows[i].text).length;
+  // diskformer's own gate: Gemma 9/9, 8/9, 9/9. The adapter phase must change replies and match at least 8 of 9.
+  return { ok: repeats && changed > 0 && on.identical >= on.compared - 1 && plain.identical >= plain.compared - 1,
+    budget, plain: `${plain.identical}/${plain.compared}`, adapter: `${on.identical}/${on.compared}`,
+    plainAgain: `${again.identical}/${again.compared}`, plainRepeats: repeats, changedByAdapter: changed,
+    misses: [...plain.rows.map((r) => ['plain', r]), ...on.rows.map((r) => ['adapter', r])].filter(([, r]) => r.identical === false)
+      .map(([p, r]) => ({ phase: p, name: r.name, ours: r.text, theirs: r.theirs })) };
 });
 </script>
