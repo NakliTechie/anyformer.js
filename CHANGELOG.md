@@ -14,8 +14,11 @@
 - `npm test` 108/108: the first load downloads the adapter once with progress from 0 to 37,437,888 bytes and caches
   it; a second load downloads nothing and reports `cached: true`.
 
-### Not yet verified
-- No browser run of the cache in Chrome; NakliOS's live check covers it.
+### Verified after publish (reported by the NakliOS session, 2026-10-31)
+- Through LocalMind a2f1a12's worker in NakliOS (Claude desktop browser pane, http://127.0.0.1:8947): the first
+  load streamed adapter progress (559 events, 37,437,888 bytes in 191 s) and created Cache Storage
+  `anyformer-adapters-v1`; a second fresh load read it back with one event at loaded = total and was ready in 1 s,
+  adapter on.
 
 ## 0.4.21 — 2026-10-31
 
