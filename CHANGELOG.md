@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.18 — 2026-10-31
+
+### Changed
+- diskformer pin f17009c → 467052f (v0.6.16): Chrome 156 rejects mixed f16/f32 subgroup-matrix kernels on Apple GPUs,
+  so Ternary Bonsai 2 27B, Gemma 4 E2B, LFM2.5 and the IQ-quant dense path failed to load ("Mixed precision subgroup
+  matrix multiply is not supported by the device"). diskformer's new `engines/subgroup-matrix-guard.js` hides the
+  feature when a tiny mixed kernel fails to compile, and those engines take their non-matrix prefill (slower prefill).
+- Browser tests: `chat` takes `?turns=N` (up to 4 follow-up turns, each checked on topic); `vision` takes `?backend=`
+  and `?local=1` (MiniCPM-V 4.7 on diskformer, image as packed RGB after `ensureVision()`); `run.mjs` prints each
+  failed network request with its reason.
+
 ## 0.4.17 — 2026-10-30
 
 ### Added

@@ -18,8 +18,20 @@ run('chat', async () => {
   });
   const loadSeconds = +((performance.now() - t0) / 1e3).toFixed(1);
   log(`loaded by ${s.backend} in ${loadSeconds} s`);
-  const r = await reply(s, [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }], 64);
+  const msgs = [{ role: 'user', content: 'Explain what a CPU does in two sentences.' }];
+  const r = await reply(s, msgs, 64);
+  // ?turns=N (up to 4): follow-up questions that need the earlier turns; each reply must name its topic, not loop,
+  // and carry no <think> text.
+  const follow = [['And what does RAM do?', /memory|store|data/i], ['Which of the two is faster?', /CPU|cache|RAM|faster/i],
+    ['Summarise both in one sentence.', /CPU/i]].slice(0, Number(q.get('turns') || 1) - 1);
+  const turns = [];
+  for (const [question, topic] of follow) {
+    msgs.push({ role: 'assistant', content: (turns.at(-1) || r).text }, { role: 'user', content: question });
+    const t = await reply(s, msgs, 64);
+    turns.push({ question, ok: topic.test(t.text) && onTopic(t.text + ' process') && !/<\/?think>/.test(t.text), ...t });
+    log(`turn ${turns.length + 1}: ${t.text}`);
+  }
   await s.dispose();
-  return { ok: onTopic(r.text) && !/<\/?think>/.test(r.text), backend: s.backend, repo: s.plan.model.repo, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(s.device && { device: s.device }), loadSeconds, ...r };
+  return { ok: onTopic(r.text) && !/<\/?think>/.test(r.text) && turns.every((t) => t.ok), backend: s.backend, repo: s.plan.model.repo, ...(q.get('dtype') && { dtype: q.get('dtype') }), ...(s.device && { device: s.device }), loadSeconds, ...r, ...(turns.length && { turns }) };
 });
 </script>
